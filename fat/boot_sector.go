@@ -82,6 +82,9 @@ func (b *bootSectorCommon) Bytes() ([]byte, error) {
 	return sector[:],nil
 }
 
+// BootSectorFat16 is the BootSector for FAT12 and FAT16 filesystems.
+// It contains the common fields to all FAT filesystems and also some
+// unique.
 type BootSectorFat16 struct {
 	bootSectorCommon
 
@@ -144,6 +147,81 @@ func (b *BootSectorFat16) Bytes() ([]byte, error) {
 		}
 
 		sector[54+i] = byte(r)
+	}
+
+	return sector, nil
+}
+
+type BootSectorFat32 struct {
+	bootSectorCommon
+
+	RootCluster uint32
+	FSInfoSector uint16
+	BackupBootSector uint16
+	DriveNumber uint8
+	VolumeID uint32
+	VolumeLabel string
+	FileSystemTypeLabel string
+}
+
+func (b *BootSectorFat32) Bytes() ([]byte, error) {
+	sector, err := b.bootSectorCommon.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	// BPB_FATSz32
+	binary.LittleEndian.PutUint32(sector[36:40], b.SectorsPerFat)
+
+	// BPB_ExtFlags - Unused?
+
+	// BPB_FSVer. Explicitly set to 0 because that is really important
+	// to get correct.
+	sector[42] = 0
+	sector[43] = 0
+
+	// BPB_RootClus
+	binary.LittleEndian.PutUint32(sector[44:48], b.RootCluster)
+
+	// BPB_FSInfo
+	binary.LittleEndian.PutUint16(sector[48:50], b.FSInfoSector)
+
+	// BPB_BkBootSec
+	binary.LittleEndian.PutUint16(sector[50:52], b.BackupBootSector)
+
+	// BS_DrvNum
+	sector[64] = b.DriveNumber
+
+	// BS_BootSig
+	sector[66] = 0x29
+
+	// BS_VolID
+	binary.LittleEndian.PutUint32(sector[67:71], b.VolumeID)
+
+	// BS_VolLab
+	if len(b.VolumeLabel) > 11 {
+		return nil, errors.New("VolumeLabel must be 11 bytes or less")
+	}
+
+	for i, r := range b.VolumeLabel {
+		if r > unicode.MaxASCII {
+			return nil, fmt.Errorf("'%s' in VolumeLabel not a valid ASCII char. Must be ASCII.", r)
+		}
+
+		sector[71+i] = byte(r)
+	}
+
+	// BS_FilSysType
+	if len(b.FileSystemTypeLabel) > 8 {
+		return nil, errors.New("FileSystemTypeLabel must be 8 bytes or less")
+	}
+
+	for i, r := range b.FileSystemTypeLabel {
+		if r > unicode.MaxASCII {
+			return nil, fmt.Errorf("'%s' in FileSystemTypeLabel not a valid ASCII char. Must be ASCII.", r)
+		}
+
+		sector[82+i] = byte(r)
 	}
 
 	return sector, nil
