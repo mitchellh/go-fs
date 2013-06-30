@@ -13,7 +13,7 @@ type MediaType uint8
 // from the FAT specification.
 const MediaFixed MediaType = 0xF8
 
-type bootSectorCommon struct {
+type BootSectorCommon struct {
 	OEMName             string
 	BytesPerSector      uint16
 	SectorsPerCluster   uint8
@@ -27,7 +27,7 @@ type bootSectorCommon struct {
 	NumHeads            uint16
 }
 
-func (b *bootSectorCommon) Bytes() ([]byte, error) {
+func (b *BootSectorCommon) Bytes() ([]byte, error) {
 	var sector [512]byte
 
 	// BS_jmpBoot
@@ -82,11 +82,18 @@ func (b *bootSectorCommon) Bytes() ([]byte, error) {
 	return sector[:], nil
 }
 
+// FATOffset returns the offset in bytes for the given index of the FAT
+func (b *BootSectorCommon) FATOffset(n int) int {
+	offset := uint32(b.ReservedSectorCount * b.BytesPerSector)
+	offset += b.SectorsPerFat * uint32(b.BytesPerSector)
+	return int(offset) * n
+}
+
 // BootSectorFat16 is the BootSector for FAT12 and FAT16 filesystems.
 // It contains the common fields to all FAT filesystems and also some
 // unique.
 type BootSectorFat16 struct {
-	bootSectorCommon
+	BootSectorCommon
 
 	DriveNumber         uint8
 	VolumeID            uint32
@@ -95,7 +102,7 @@ type BootSectorFat16 struct {
 }
 
 func (b *BootSectorFat16) Bytes() ([]byte, error) {
-	sector, err := b.bootSectorCommon.Bytes()
+	sector, err := b.BootSectorCommon.Bytes()
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +160,7 @@ func (b *BootSectorFat16) Bytes() ([]byte, error) {
 }
 
 type BootSectorFat32 struct {
-	bootSectorCommon
+	BootSectorCommon
 
 	RootCluster         uint32
 	FSInfoSector        uint16
@@ -165,7 +172,7 @@ type BootSectorFat32 struct {
 }
 
 func (b *BootSectorFat32) Bytes() ([]byte, error) {
-	sector, err := b.bootSectorCommon.Bytes()
+	sector, err := b.BootSectorCommon.Bytes()
 	if err != nil {
 		return nil, err
 	}

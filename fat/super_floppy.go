@@ -49,7 +49,7 @@ func (f *superFloppyFormatter) format() error {
 		return err
 	}
 
-	bsCommon := bootSectorCommon{
+	bsCommon := BootSectorCommon{
 		BytesPerSector:      uint16(f.device.SectorSize()),
 		Media:               MediaFixed,
 		NumFATs:             2,
@@ -61,7 +61,7 @@ func (f *superFloppyFormatter) format() error {
 		TotalSectors:        uint32(f.device.Len() / int64(f.device.SectorSize())),
 	}
 
-	// Next, fill in the
+	// Next, fill in the FAT-type specific boot sector information
 	switch f.config.FATType {
 	case FAT12, FAT16:
 		// Determine the filesystem type label, standard from the spec sheet
@@ -73,7 +73,7 @@ func (f *superFloppyFormatter) format() error {
 		}
 
 		bs := &BootSectorFat16{
-			bootSectorCommon:    bsCommon,
+			BootSectorCommon:    bsCommon,
 			FileSystemTypeLabel: label,
 			VolumeLabel:         f.config.Label,
 		}
@@ -98,7 +98,7 @@ func (f *superFloppyFormatter) format() error {
 		}
 	case FAT32:
 		bs := &BootSectorFat32{
-			bootSectorCommon:    bsCommon,
+			BootSectorCommon:    bsCommon,
 			FileSystemTypeLabel: "FAT32   ",
 			FSInfoSector:        1,
 			VolumeID:            uint32(time.Now().Unix()),
@@ -116,8 +116,25 @@ func (f *superFloppyFormatter) format() error {
 		if _, err := f.device.WriteAt(bsBytes, 0); err != nil {
 			return err
 		}
+
+		// TODO(mitchellh): Create the fsinfo structure
+		// TODO(mitchellh): write the boot sector copy
 	default:
 		return fmt.Errorf("Unknown FAT type: %d", f.config.FATType)
+	}
+
+	// Create the FATs
+	fat, err := NewFAT(&bsCommon)
+	if err != nil {
+		return err
+	}
+
+	// TODO(mitchellh): 2 should be a variable for number of FATs
+	fatBytes := fat.Bytes()
+	for i := 0; i < 2; i++ {
+		if _, err := f.device.WriteAt(fatBytes, int64(bsCommon.FATOffset(i))); err != nil {
+			return err
+		}
 	}
 
 	return nil
