@@ -4,37 +4,14 @@ package fat
 // stored on disk to describe the various clusters on the disk.
 type FAT struct {
 	bs      *BootSectorCommon
-	fatType FATType
 	entries []uint32
 }
 
 // NewFAT creates a new FAT data structure, properly initialized.
 func NewFAT(bs *BootSectorCommon) (*FAT, error) {
-	// Determine what FAT-type we're using. This is done using a calculation
-	// pulled directly from the specification. This is the ONLY way to PROPERLY
-	// calculate this.
-	var rootDirSectors uint32
-	rootDirSectors = (uint32(bs.RootEntryCount) * 32) + (uint32(bs.BytesPerSector) - 1)
-	rootDirSectors /= uint32(bs.BytesPerSector)
-	dataSectors := bs.SectorsPerFat * uint32(bs.NumFATs)
-	dataSectors += uint32(bs.ReservedSectorCount)
-	dataSectors += rootDirSectors
-	dataSectors = bs.TotalSectors - dataSectors
-	countClusters := dataSectors / uint32(bs.SectorsPerCluster)
-
-	var fatType FATType
-	switch {
-	case countClusters < 4085:
-		fatType = FAT12
-	case countClusters < 65525:
-		fatType = FAT16
-	default:
-		fatType = FAT32
-	}
-
 	// Determine the number of entries that'll go in the FAT.
 	var entryCount uint32 = bs.SectorsPerFat * uint32(bs.BytesPerSector)
-	switch fatType {
+	switch bs.FATType() {
 	case FAT12:
 		entryCount = uint32((uint64(entryCount) * 8) / 12)
 	case FAT16:
@@ -47,7 +24,6 @@ func NewFAT(bs *BootSectorCommon) (*FAT, error) {
 
 	result := &FAT{
 		bs:      bs,
-		fatType: fatType,
 		entries: make([]uint32, entryCount),
 	}
 
@@ -65,7 +41,7 @@ func (f *FAT) Bytes() []byte {
 	result := make([]byte, f.bs.SectorsPerFat*uint32(f.bs.BytesPerSector))
 
 	for i, entry := range f.entries {
-		switch f.fatType {
+		switch f.bs.FATType() {
 		case FAT12:
 			f.writeEntry12(result, i, entry)
 		case FAT16:
@@ -79,7 +55,7 @@ func (f *FAT) Bytes() []byte {
 }
 
 func (f *FAT) entryMask() uint32 {
-	switch f.fatType {
+	switch f.bs.FATType() {
 	case FAT12:
 		return 0x0FFF
 	case FAT16:

@@ -89,6 +89,27 @@ func (b *BootSectorCommon) FATOffset(n int) int {
 	return int(offset)
 }
 
+// Calculates the FAT type that this boot sector represents.
+func (b *BootSectorCommon) FATType() FATType {
+	var rootDirSectors uint32
+	rootDirSectors = (uint32(b.RootEntryCount) * 32) + (uint32(b.BytesPerSector) - 1)
+	rootDirSectors /= uint32(b.BytesPerSector)
+	dataSectors := b.SectorsPerFat * uint32(b.NumFATs)
+	dataSectors += uint32(b.ReservedSectorCount)
+	dataSectors += rootDirSectors
+	dataSectors = b.TotalSectors - dataSectors
+	countClusters := dataSectors / uint32(b.SectorsPerCluster)
+
+	switch {
+	case countClusters < 4085:
+		return FAT12
+	case countClusters < 65525:
+		return FAT16
+	default:
+		return FAT32
+	}
+}
+
 // RootDirOffset returns the byte offset when the root directory
 // entries for FAT12/16 filesystems start. NOTE: This is absolutely useless
 // for FAT32 because the root directory is just the beginning of the data
