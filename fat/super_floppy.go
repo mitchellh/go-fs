@@ -50,13 +50,13 @@ func (f *superFloppyFormatter) format() error {
 	}
 
 	bsCommon := bootSectorCommon{
-		Media: MediaFixed,
-		NumFATs: 2,
-		NumHeads: 64,
-		OEMName: f.config.OEMName,
+		Media:               MediaFixed,
+		NumFATs:             2,
+		NumHeads:            64,
+		OEMName:             f.config.OEMName,
 		ReservedSectorCount: f.ReservedSectorCount(),
-		SectorsPerCluster: sectorsPerCluster,
-		SectorsPerTrack: 32,
+		SectorsPerCluster:   sectorsPerCluster,
+		SectorsPerTrack:     32,
 	}
 
 	// Next, fill in the
@@ -71,13 +71,13 @@ func (f *superFloppyFormatter) format() error {
 		}
 
 		bs := &BootSectorFat16{
-			bootSectorCommon: bsCommon,
+			bootSectorCommon:    bsCommon,
 			FileSystemTypeLabel: label,
-			VolumeLabel: f.config.Label,
+			VolumeLabel:         f.config.Label,
 		}
 
 		// Determine the number of root directory entries
-		if f.device.Len() > 512 * 5 * 32 {
+		if f.device.Len() > 512*5*32 {
 			bs.RootEntryCount = 512
 		} else {
 			bs.RootEntryCount = uint16(f.device.Len() / (5 * 32))
@@ -96,11 +96,11 @@ func (f *superFloppyFormatter) format() error {
 		}
 	case FAT32:
 		bs := &BootSectorFat32{
-			bootSectorCommon: bsCommon,
+			bootSectorCommon:    bsCommon,
 			FileSystemTypeLabel: "FAT32   ",
-			FSInfoSector: 1,
-			VolumeID: uint32(time.Now().Unix()),
-			VolumeLabel: f.config.Label,
+			FSInfoSector:        1,
+			VolumeID:            uint32(time.Now().Unix()),
+			VolumeLabel:         f.config.Label,
 		}
 
 		bs.SectorsPerFat = f.sectorsPerFat(0, sectorsPerCluster)
@@ -145,7 +145,7 @@ func (f *superFloppyFormatter) defaultSectorsPerCluster12() (uint8, error) {
 
 	for (sectors / int64(result)) > 4084 {
 		result *= 2
-		if (int(result) * f.device.SectorSize() > 4096) {
+		if int(result)*f.device.SectorSize() > 4096 {
 			return 0, errors.New("disk too large for FAT12")
 		}
 	}

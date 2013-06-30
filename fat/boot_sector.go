@@ -14,17 +14,17 @@ type MediaType uint8
 const MediaFixed MediaType = 0xF8
 
 type bootSectorCommon struct {
-	OEMName string
-	BytesPerSector uint16
-	SectorsPerCluster uint8
+	OEMName             string
+	BytesPerSector      uint16
+	SectorsPerCluster   uint8
 	ReservedSectorCount uint16
-	NumFATs uint8
-	RootEntryCount uint16
-	TotalSectors uint32
-	Media MediaType
-	SectorsPerFat uint32
-	SectorsPerTrack uint16
-	NumHeads uint16
+	NumFATs             uint8
+	RootEntryCount      uint16
+	TotalSectors        uint32
+	Media               MediaType
+	SectorsPerFat       uint32
+	SectorsPerTrack     uint16
+	NumHeads            uint16
 }
 
 func (b *bootSectorCommon) Bytes() ([]byte, error) {
@@ -79,7 +79,7 @@ func (b *bootSectorCommon) Bytes() ([]byte, error) {
 	sector[510] = 0x55
 	sector[511] = 0xAA
 
-	return sector[:],nil
+	return sector[:], nil
 }
 
 // BootSectorFat16 is the BootSector for FAT12 and FAT16 filesystems.
@@ -88,9 +88,9 @@ func (b *bootSectorCommon) Bytes() ([]byte, error) {
 type BootSectorFat16 struct {
 	bootSectorCommon
 
-	DriveNumber uint8
-	VolumeID uint32
-	VolumeLabel string
+	DriveNumber         uint8
+	VolumeID            uint32
+	VolumeLabel         string
 	FileSystemTypeLabel string
 }
 
@@ -155,12 +155,12 @@ func (b *BootSectorFat16) Bytes() ([]byte, error) {
 type BootSectorFat32 struct {
 	bootSectorCommon
 
-	RootCluster uint32
-	FSInfoSector uint16
-	BackupBootSector uint16
-	DriveNumber uint8
-	VolumeID uint32
-	VolumeLabel string
+	RootCluster         uint32
+	FSInfoSector        uint16
+	BackupBootSector    uint16
+	DriveNumber         uint8
+	VolumeID            uint32
+	VolumeLabel         string
 	FileSystemTypeLabel string
 }
 

@@ -8,7 +8,7 @@ import (
 // A FileDisk is an implementation of a BlockDevice that uses a
 // *os.File as its backing store.
 type FileDisk struct {
-	f *os.File
+	f    *os.File
 	size int64
 }
 
@@ -25,7 +25,7 @@ func NewFileDisk(f *os.File) (*FileDisk, error) {
 	}
 
 	return &FileDisk{
-		f: f,
+		f:    f,
 		size: fi.Size(),
 	}, nil
 }
