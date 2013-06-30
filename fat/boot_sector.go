@@ -89,6 +89,16 @@ func (b *BootSectorCommon) FATOffset(n int) int {
 	return int(offset)
 }
 
+// RootDirOffset returns the byte offset when the root directory
+// entries for FAT12/16 filesystems start. NOTE: This is absolutely useless
+// for FAT32 because the root directory is just the beginning of the data
+// region.
+func (b *BootSectorCommon) RootDirOffset() int {
+	offset := b.FATOffset(0)
+	offset += int(uint32(b.NumFATs) * b.SectorsPerFat * uint32(b.BytesPerSector))
+	return offset
+}
+
 // BootSectorFat16 is the BootSector for FAT12 and FAT16 filesystems.
 // It contains the common fields to all FAT filesystems and also some
 // unique.

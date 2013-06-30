@@ -98,7 +98,7 @@ func (f *FAT) writeEntry12(data []byte, idx int, entry uint32) {
 		data[idx+1] = byte((entry >> 8) & 0x0F)
 	} else {
 		// Cluster number is ODD
-		data[idx] = byte((entry & 0x0F) << 4)
+		data[idx] |= byte((entry & 0x0F) << 4)
 		data[idx+1] = byte((entry >> 4) & 0xFF)
 	}
 }

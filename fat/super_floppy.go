@@ -133,8 +133,22 @@ func (f *superFloppyFormatter) format() error {
 	fatBytes := fat.Bytes()
 	for i := 0; i < 2; i++ {
 		offset := int64(bsCommon.FATOffset(i))
-		fmt.Printf("OFFSET: %d\n", offset)
 		if _, err := f.device.WriteAt(fatBytes, offset); err != nil {
+			return err
+		}
+	}
+
+	var rootDir *Directory
+	if f.config.FATType == FAT32 {
+		panic("TODO")
+	} else {
+		rootDir, err = NewFat16RootDirectory(&bsCommon)
+		if err != nil {
+			return err
+		}
+
+		offset := int64(bsCommon.RootDirOffset())
+		if _, err := f.device.WriteAt(rootDir.Bytes(), offset); err != nil {
 			return err
 		}
 	}
