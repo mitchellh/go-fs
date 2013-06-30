@@ -50,6 +50,7 @@ func (f *superFloppyFormatter) format() error {
 	}
 
 	bsCommon := bootSectorCommon{
+		BytesPerSector:      uint16(f.device.SectorSize()),
 		Media:               MediaFixed,
 		NumFATs:             2,
 		NumHeads:            64,
@@ -57,6 +58,7 @@ func (f *superFloppyFormatter) format() error {
 		ReservedSectorCount: f.ReservedSectorCount(),
 		SectorsPerCluster:   sectorsPerCluster,
 		SectorsPerTrack:     32,
+		TotalSectors:        uint32(f.device.Len() / int64(f.device.SectorSize())),
 	}
 
 	// Next, fill in the
