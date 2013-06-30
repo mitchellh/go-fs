@@ -46,13 +46,14 @@ func NewFAT(bs *BootSectorCommon) (*FAT, error) {
 	}
 
 	result := &FAT{
-		bs: bs,
+		bs:      bs,
 		fatType: fatType,
 		entries: make([]uint32, entryCount),
 	}
 
 	// Set the initial two entries according to spec
-	result.entries[0] = (uint32(bs.Media) & 0xFF) | (0xFFFFFF00 & result.entryMask())
+	result.entries[0] = (uint32(bs.Media) & 0xFF) |
+		(0xFFFFFF00 & result.entryMask())
 	result.entries[1] = 0xFFFFFFFF & result.entryMask()
 
 	return result, nil
@@ -61,7 +62,7 @@ func NewFAT(bs *BootSectorCommon) (*FAT, error) {
 // Bytes returns the raw bytes for the FAT that should be written to
 // the block device.
 func (f *FAT) Bytes() []byte {
-	result := make([]byte, f.bs.SectorsPerFat * uint32(f.bs.BytesPerSector))
+	result := make([]byte, f.bs.SectorsPerFat*uint32(f.bs.BytesPerSector))
 
 	for i, entry := range f.entries {
 		switch f.fatType {
@@ -91,7 +92,7 @@ func (f *FAT) entryMask() uint32 {
 func (f *FAT) writeEntry12(data []byte, idx int, entry uint32) {
 	idx += idx / 2
 
-	if idx % 2 == 0 {
+	if idx%2 == 0 {
 		// Cluster number is EVEN
 		data[idx] = byte(entry & 0xFF)
 		data[idx+1] = byte((entry >> 8) & 0x0F)

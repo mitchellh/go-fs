@@ -132,7 +132,9 @@ func (f *superFloppyFormatter) format() error {
 	// TODO(mitchellh): 2 should be a variable for number of FATs
 	fatBytes := fat.Bytes()
 	for i := 0; i < 2; i++ {
-		if _, err := f.device.WriteAt(fatBytes, int64(bsCommon.FATOffset(i))); err != nil {
+		offset := int64(bsCommon.FATOffset(i))
+		fmt.Printf("OFFSET: %d\n", offset)
+		if _, err := f.device.WriteAt(fatBytes, offset); err != nil {
 			return err
 		}
 	}

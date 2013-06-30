@@ -85,8 +85,8 @@ func (b *BootSectorCommon) Bytes() ([]byte, error) {
 // FATOffset returns the offset in bytes for the given index of the FAT
 func (b *BootSectorCommon) FATOffset(n int) int {
 	offset := uint32(b.ReservedSectorCount * b.BytesPerSector)
-	offset += b.SectorsPerFat * uint32(b.BytesPerSector)
-	return int(offset) * n
+	offset += b.SectorsPerFat * uint32(b.BytesPerSector) * uint32(n)
+	return int(offset)
 }
 
 // BootSectorFat16 is the BootSector for FAT12 and FAT16 filesystems.
