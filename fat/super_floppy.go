@@ -72,20 +72,20 @@ func (f *superFloppyFormatter) format() error {
 			label = "FAT16   "
 		}
 
+		// Determine the number of root directory entries
+		if f.device.Len() > 512*5*32 {
+			bsCommon.RootEntryCount = 512
+		} else {
+			bsCommon.RootEntryCount = uint16(f.device.Len() / (5 * 32))
+		}
+
+		bsCommon.SectorsPerFat = f.sectorsPerFat(bsCommon.RootEntryCount, sectorsPerCluster)
+
 		bs := &BootSectorFat16{
 			BootSectorCommon:    bsCommon,
 			FileSystemTypeLabel: label,
 			VolumeLabel:         f.config.Label,
 		}
-
-		// Determine the number of root directory entries
-		if f.device.Len() > 512*5*32 {
-			bs.RootEntryCount = 512
-		} else {
-			bs.RootEntryCount = uint16(f.device.Len() / (5 * 32))
-		}
-
-		bs.SectorsPerFat = f.sectorsPerFat(bs.RootEntryCount, sectorsPerCluster)
 
 		// Write the boot sector
 		bsBytes, err := bs.Bytes()
@@ -97,6 +97,8 @@ func (f *superFloppyFormatter) format() error {
 			return err
 		}
 	case FAT32:
+		bsCommon.SectorsPerFat = f.sectorsPerFat(0, sectorsPerCluster)
+
 		bs := &BootSectorFat32{
 			BootSectorCommon:    bsCommon,
 			FileSystemTypeLabel: "FAT32   ",
@@ -104,8 +106,6 @@ func (f *superFloppyFormatter) format() error {
 			VolumeID:            uint32(time.Now().Unix()),
 			VolumeLabel:         f.config.Label,
 		}
-
-		bs.SectorsPerFat = f.sectorsPerFat(0, sectorsPerCluster)
 
 		// Write the boot sector
 		bsBytes, err := bs.Bytes()
