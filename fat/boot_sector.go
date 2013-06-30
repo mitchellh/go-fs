@@ -170,6 +170,10 @@ func (b *BootSectorFat32) Bytes() ([]byte, error) {
 		return nil, err
 	}
 
+	// BPB_RootEntCount - must be 0
+	sector[17] = 0
+	sector[18] = 0
+
 	// BPB_FATSz32
 	binary.LittleEndian.PutUint32(sector[36:40], b.SectorsPerFat)
 
