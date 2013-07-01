@@ -45,5 +45,10 @@ func New(device fs.BlockDevice) (*FileSystem, error) {
 }
 
 func (f *FileSystem) RootDir() (fs.Directory, error) {
-	return f.rootDir, nil
+	dir := &Directory{
+		dirCluster: f.rootDir,
+		fat:        f.fat,
+	}
+
+	return dir, nil
 }

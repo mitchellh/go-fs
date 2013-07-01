@@ -17,7 +17,7 @@ func DecodeFAT(device fs.BlockDevice, bs *BootSectorCommon, n int) (*FAT, error)
 		return nil, fmt.Errorf("FAT #%d greater than total FATs: %d", n, bs.NumFATs)
 	}
 
-	data := make([]byte, uint16(bs.SectorsPerCluster)*bs.BytesPerSector)
+	data := make([]byte, bs.SectorsPerFat*uint32(bs.BytesPerSector))
 	if _, err := device.ReadAt(data, int64(bs.FATOffset(n))); err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func DecodeFAT(device fs.BlockDevice, bs *BootSectorCommon, n int) (*FAT, error)
 	}
 
 	fatType := bs.FATType()
-	for i, _ := range result.entries {
+	for i := 0; i < int(FATEntryCount(bs)); i++ {
 		var entryData uint32
 		switch fatType {
 		case FAT12:

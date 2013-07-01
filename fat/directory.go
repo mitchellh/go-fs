@@ -1,7 +1,9 @@
 package fat
 
 import (
+	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/mitchellh/go-fs"
 	"time"
 )
@@ -28,19 +30,30 @@ type Directory struct {
 	fat        *FAT
 }
 
+func (d *Directory) Entries() []fs.DirectoryEntry {
+	for i, entry := range d.dirCluster.entries {
+		fmt.Printf("%d: %s\n", i, entry.name)
+	}
+	return nil
+}
+
 // DirectoryCluster represents a cluster on the disk that contains
 // entries/contents.
 type DirectoryCluster struct {
-	Entries []*DirectoryEntry
+	entries []*DirectoryEntry
 }
 
 // DirectoryEntry is a single 32-byte entry that is part of the
 // chain of entries in a directory cluster.
 type DirectoryEntry struct {
-	Name       string
-	Attr       DirectoryAttr
-	CreateTime time.Time
-	AccessTime time.Time
+	name       string
+	ext        string
+	attr       DirectoryAttr
+	createTime time.Time
+	accessTime time.Time
+	writeTime  time.Time
+	cluster    uint32
+	fileSize   uint32
 }
 
 // DecodeFAT16RootDirectory decodes the FAT16 root directory structure
@@ -55,21 +68,21 @@ func DecodeFAT16RootDirectoryCluster(device fs.BlockDevice, bs *BootSectorCommon
 	for i := uint16(0); i < bs.RootEntryCount; i++ {
 		offset := i * DirectoryEntrySize
 		entryData := data[offset : offset+DirectoryEntrySize]
-		if entryData[0] == 0 {
-			// We're done if the first byte is nul
-			break
-		}
-
 		entry, err := DecodeDirectoryEntry(entryData)
 		if err != nil {
 			return nil, err
+		}
+
+		if entry == nil {
+			// End of the chain of entries
+			break
 		}
 
 		entries = append(entries, entry)
 	}
 
 	result := &DirectoryCluster{
-		Entries: entries,
+		entries: entries,
 	}
 
 	return result, nil
@@ -83,7 +96,7 @@ func NewFat16RootDirectoryCluster(bs *BootSectorCommon) (*DirectoryCluster, erro
 	}
 
 	result := &DirectoryCluster{
-		Entries: make([]*DirectoryEntry, 0, bs.RootEntryCount),
+		entries: make([]*DirectoryEntry, 0, bs.RootEntryCount),
 	}
 
 	return result, nil
@@ -91,9 +104,9 @@ func NewFat16RootDirectoryCluster(bs *BootSectorCommon) (*DirectoryCluster, erro
 
 // Bytes returns the on-disk byte data for this directory structure.
 func (d *DirectoryCluster) Bytes() []byte {
-	result := make([]byte, cap(d.Entries)*DirectoryEntrySize)
+	result := make([]byte, cap(d.entries)*DirectoryEntrySize)
 
-	for i, entry := range d.Entries {
+	for i, entry := range d.entries {
 		offset := i * DirectoryEntrySize
 		entryBytes := entry.Bytes()
 		copy(result[offset:offset+DirectoryEntrySize], entryBytes)
@@ -111,5 +124,55 @@ func (d *DirectoryEntry) Bytes() []byte {
 // DecodeDirectoryEntry decodes a single directory entry in the
 // Directory structure.
 func DecodeDirectoryEntry(data []byte) (*DirectoryEntry, error) {
-	return &DirectoryEntry{}, nil
+	if data[0] == 0xE5 || data[0] == 0 {
+		return nil, nil
+	}
+
+	var result DirectoryEntry
+
+	// Basic attributes
+	if data[0] == 0x05 {
+		data[0] = 0xE5
+	}
+
+	result.name = string(data[0:8])
+	result.ext = string(data[8:11])
+	result.attr = DirectoryAttr(data[11])
+
+	// Creation time
+	createTimeTenths := data[13]
+	createTimeWord := binary.LittleEndian.Uint16(data[14:16])
+	createDateWord := binary.LittleEndian.Uint16(data[16:18])
+	result.createTime = decodeDOSTime(createDateWord, createTimeWord, createTimeTenths)
+
+	// Access time
+	accessDateWord := binary.LittleEndian.Uint16(data[18:20])
+	result.accessTime = decodeDOSTime(accessDateWord, 0, 0)
+
+	// Write time
+	writeTimeWord := binary.LittleEndian.Uint16(data[22:24])
+	writeDateWord := binary.LittleEndian.Uint16(data[24:26])
+	result.writeTime = decodeDOSTime(writeDateWord, writeTimeWord, 0)
+
+	// Cluster
+	result.cluster = uint32(binary.LittleEndian.Uint16(data[20:22]))
+	result.cluster <<= 4
+	result.cluster |= uint32(binary.LittleEndian.Uint16(data[26:28]))
+
+	// File size
+	result.fileSize = binary.LittleEndian.Uint32(data[28:32])
+
+	return &result, nil
+}
+
+func decodeDOSTime(date, dosTime uint16, tenths uint8) time.Time {
+	return time.Date(
+		1980+int(date>>9),
+		time.Month((date>>5)&0x0F),
+		int(date&0x1F),
+		int(dosTime>>11),
+		int((dosTime>>5)&0x3F),
+		int((dosTime&0x1F)*2),
+		int(tenths)*10*int(time.Millisecond),
+		time.Local)
 }
