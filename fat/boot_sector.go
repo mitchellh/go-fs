@@ -3,8 +3,8 @@ package fat
 import (
 	"encoding/binary"
 	"errors"
-	"github.com/mitchellh/go-fs"
 	"fmt"
+	"github.com/mitchellh/go-fs"
 	"unicode"
 )
 
@@ -72,7 +72,7 @@ func DecodeBootSector(device fs.BlockDevice) (*BootSectorCommon, error) {
 	// BPB_TotSec16 / BPB_TotSec32
 	result.TotalSectors = uint32(binary.LittleEndian.Uint16(sector[19:21]))
 	if result.TotalSectors == 0 {
-		result.TotalSectors =  binary.LittleEndian.Uint32(sector[32:36])
+		result.TotalSectors = binary.LittleEndian.Uint32(sector[32:36])
 	}
 
 	// BPB_FATSz16 / BPB_FATSz32

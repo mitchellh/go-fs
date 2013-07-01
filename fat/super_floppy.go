@@ -138,11 +138,11 @@ func (f *superFloppyFormatter) format() error {
 		}
 	}
 
-	var rootDir *Directory
+	var rootDir *DirectoryCluster
 	if f.config.FATType == FAT32 {
 		panic("TODO")
 	} else {
-		rootDir, err = NewFat16RootDirectory(&bsCommon)
+		rootDir, err = NewFat16RootDirectoryCluster(&bsCommon)
 		if err != nil {
 			return err
 		}
