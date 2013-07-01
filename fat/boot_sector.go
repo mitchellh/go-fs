@@ -3,6 +3,7 @@ package fat
 import (
 	"encoding/binary"
 	"errors"
+	"github.com/mitchellh/go-fs"
 	"fmt"
 	"unicode"
 )
@@ -25,6 +26,62 @@ type BootSectorCommon struct {
 	SectorsPerFat       uint32
 	SectorsPerTrack     uint16
 	NumHeads            uint16
+}
+
+// DecodeBootSector takes a BlockDevice and decodes the FAT boot sector
+// from it.
+func DecodeBootSector(device fs.BlockDevice) (*BootSectorCommon, error) {
+	var sector [512]byte
+	if _, err := device.ReadAt(sector[:], 0); err != nil {
+		return nil, err
+	}
+
+	if sector[510] != 0x55 || sector[511] != 0xAA {
+		return nil, errors.New("corrupt boot sector signature")
+	}
+
+	result := new(BootSectorCommon)
+
+	// BS_OEMName
+	result.OEMName = string(sector[3:11])
+
+	// BPB_BytsPerSec
+	result.BytesPerSector = binary.LittleEndian.Uint16(sector[11:13])
+
+	// BPB_SecPerClus
+	result.SectorsPerCluster = sector[13]
+
+	// BPB_RsvdSecCnt
+	result.ReservedSectorCount = binary.LittleEndian.Uint16(sector[14:16])
+
+	// BPB_NumFATs
+	result.NumFATs = sector[16]
+
+	// BPB_RootEntCnt
+	result.RootEntryCount = binary.LittleEndian.Uint16(sector[17:19])
+
+	// BPB_Media
+	result.Media = MediaType(sector[21])
+
+	// BPB_SecPerTrk
+	result.SectorsPerTrack = binary.LittleEndian.Uint16(sector[24:26])
+
+	// BPB_NumHeads
+	result.NumHeads = binary.LittleEndian.Uint16(sector[26:28])
+
+	// BPB_TotSec16 / BPB_TotSec32
+	result.TotalSectors = uint32(binary.LittleEndian.Uint16(sector[19:21]))
+	if result.TotalSectors == 0 {
+		result.TotalSectors =  binary.LittleEndian.Uint32(sector[32:36])
+	}
+
+	// BPB_FATSz16 / BPB_FATSz32
+	result.SectorsPerFat = uint32(binary.LittleEndian.Uint16(sector[22:24]))
+	if result.SectorsPerFat == 0 {
+		result.SectorsPerFat = binary.LittleEndian.Uint32(sector[36:40])
+	}
+
+	return result, nil
 }
 
 func (b *BootSectorCommon) Bytes() ([]byte, error) {
