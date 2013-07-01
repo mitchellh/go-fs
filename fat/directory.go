@@ -33,6 +33,10 @@ type Directory struct {
 
 func (d *Directory) Entries() []fs.DirectoryEntry {
 	for i, entry := range d.dirCluster.entries {
+		if entry.deleted {
+			continue
+		}
+
 		if entry.longName != "" {
 			fmt.Printf("%d: %s (LONG)\n", i, entry.longName)
 		} else {
@@ -59,6 +63,7 @@ type DirectoryEntry struct {
 	writeTime  time.Time
 	cluster    uint32
 	fileSize   uint32
+	deleted    bool
 
 	longOrd      uint8
 	longName     string
@@ -77,14 +82,13 @@ func DecodeFAT16RootDirectoryCluster(device fs.BlockDevice, bs *BootSectorCommon
 	for i := uint16(0); i < bs.RootEntryCount; i++ {
 		offset := i * DirectoryEntrySize
 		entryData := data[offset : offset+DirectoryEntrySize]
+		if entryData[0] == 0 {
+			break
+		}
+
 		entry, err := DecodeDirectoryEntry(entryData)
 		if err != nil {
 			return nil, err
-		}
-
-		if entry == nil {
-			// End of the chain of entries
-			break
 		}
 
 		entries = append(entries, entry)
@@ -133,10 +137,6 @@ func (d *DirectoryEntry) Bytes() []byte {
 // DecodeDirectoryEntry decodes a single directory entry in the
 // Directory structure.
 func DecodeDirectoryEntry(data []byte) (*DirectoryEntry, error) {
-	if data[0] == 0 {
-		return nil, nil
-	}
-
 	var result DirectoryEntry
 
 	// Do the attributes so we can determine if we're dealing with long names
@@ -163,9 +163,7 @@ func DecodeDirectoryEntry(data []byte) (*DirectoryEntry, error) {
 		result.longName = string(utf16.Decode(chars))
 		result.longChecksum = data[13]
 	} else {
-		if data[0] == 0xE5 {
-			return nil, nil
-		}
+		result.deleted = data[0] == 0xE5
 
 		// Basic attributes
 		if data[0] == 0x05 {
