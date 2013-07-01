@@ -1,5 +1,10 @@
 package fat
 
+import (
+	"fmt"
+	"github.com/mitchellh/go-fs"
+)
+
 // FAT is the actual file allocation table data structure that is
 // stored on disk to describe the various clusters on the disk.
 type FAT struct {
@@ -7,24 +12,44 @@ type FAT struct {
 	entries []uint32
 }
 
-// NewFAT creates a new FAT data structure, properly initialized.
-func NewFAT(bs *BootSectorCommon) (*FAT, error) {
-	// Determine the number of entries that'll go in the FAT.
-	var entryCount uint32 = bs.SectorsPerFat * uint32(bs.BytesPerSector)
-	switch bs.FATType() {
-	case FAT12:
-		entryCount = uint32((uint64(entryCount) * 8) / 12)
-	case FAT16:
-		entryCount /= 2
-	case FAT32:
-		entryCount /= 4
-	default:
-		panic("impossible fat type")
+func DecodeFAT(device fs.BlockDevice, bs *BootSectorCommon, n int) (*FAT, error) {
+	if n > int(bs.NumFATs) {
+		return nil, fmt.Errorf("FAT #%d greater than total FATs: %d", n, bs.NumFATs)
+	}
+
+	data := make([]byte, uint16(bs.SectorsPerCluster) * bs.BytesPerSector)
+	if _, err := device.ReadAt(data, int64(bs.FATOffset(n))); err != nil {
+		return nil, err
 	}
 
 	result := &FAT{
+		bs: bs,
+		entries: make([]uint32, FATEntryCount(bs)),
+	}
+
+	fatType := bs.FATType()
+	for i, _ := range result.entries {
+		var entryData uint32
+		switch fatType {
+		case FAT12:
+			entryData = fatReadEntry12(data, i)
+		case FAT16:
+			entryData = fatReadEntry16(data, i)
+		default:
+			entryData = fatReadEntry32(data, i)
+		}
+
+		result.entries[i] = entryData
+	}
+
+	return result, nil
+}
+
+// NewFAT creates a new FAT data structure, properly initialized.
+func NewFAT(bs *BootSectorCommon) (*FAT, error) {
+	result := &FAT{
 		bs:      bs,
-		entries: make([]uint32, entryCount),
+		entries: make([]uint32, FATEntryCount(bs)),
 	}
 
 	// Set the initial two entries according to spec
@@ -91,4 +116,47 @@ func (f *FAT) writeEntry32(data []byte, idx int, entry uint32) {
 	data[idx+1] = byte((entry >> 8) & 0xFF)
 	data[idx+2] = byte((entry >> 16) & 0xFF)
 	data[idx+3] = byte((entry >> 24) & 0xFF)
+}
+
+// FATEntryCount returns the number of entries per fat for the given
+// boot sector.
+func FATEntryCount(bs *BootSectorCommon) uint32 {
+	// Determine the number of entries that'll go in the FAT.
+	var entryCount uint32 = bs.SectorsPerFat * uint32(bs.BytesPerSector)
+	switch bs.FATType() {
+	case FAT12:
+		entryCount = uint32((uint64(entryCount) * 8) / 12)
+	case FAT16:
+		entryCount /= 2
+	case FAT32:
+		entryCount /= 4
+	default:
+		panic("impossible fat type")
+	}
+
+	return entryCount
+}
+
+func fatReadEntry12(data []byte, idx int) uint32 {
+	idx += idx / 2
+
+	var result uint32 = (uint32(data[idx+1]) << 8) | uint32(data[idx])
+	if idx%2 == 0 {
+		return result & 0xFFF
+	} else {
+		return result >> 4
+	}
+}
+
+func fatReadEntry16(data []byte, idx int) uint32 {
+	idx <<= 1
+	return (uint32(data[idx+1]) << 8) | uint32(data[idx])
+}
+
+func fatReadEntry32(data []byte, idx int) uint32 {
+	idx <<= 2
+	return (uint32(data[idx+3]) << 24) |
+		(uint32(data[idx+2]) << 16) |
+		(uint32(data[idx+1]) << 8) |
+		uint32(data[idx+0])
 }

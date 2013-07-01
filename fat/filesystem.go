@@ -8,6 +8,7 @@ import (
 // FAT filesystem.
 type FileSystem struct {
 	bs *BootSectorCommon
+	fat *FAT
 }
 
 // New returns a new FileSystem for accessing a previously created
@@ -18,8 +19,14 @@ func New(device fs.BlockDevice) (*FileSystem, error) {
 		return nil, err
 	}
 
+	fat, err := DecodeFAT(device, bs, 0)
+	if err != nil {
+		return nil, err
+	}
+
 	result := &FileSystem{
 		bs: bs,
+		fat: fat,
 	}
 
 	return result, nil
