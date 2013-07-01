@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/mitchellh/go-fs"
 	"time"
+	"unicode/utf16"
 )
 
 type DirectoryAttr uint8
@@ -32,7 +33,11 @@ type Directory struct {
 
 func (d *Directory) Entries() []fs.DirectoryEntry {
 	for i, entry := range d.dirCluster.entries {
-		fmt.Printf("%d: %s\n", i, entry.name)
+		if entry.longName != "" {
+			fmt.Printf("%d: %s (LONG)\n", i, entry.longName)
+		} else {
+			fmt.Printf("%d: %s\n", i, entry.name)
+		}
 	}
 	return nil
 }
@@ -54,6 +59,10 @@ type DirectoryEntry struct {
 	writeTime  time.Time
 	cluster    uint32
 	fileSize   uint32
+
+	longOrd      uint8
+	longName     string
+	longChecksum uint8
 }
 
 // DecodeFAT16RootDirectory decodes the FAT16 root directory structure
@@ -124,43 +133,71 @@ func (d *DirectoryEntry) Bytes() []byte {
 // DecodeDirectoryEntry decodes a single directory entry in the
 // Directory structure.
 func DecodeDirectoryEntry(data []byte) (*DirectoryEntry, error) {
-	if data[0] == 0xE5 || data[0] == 0 {
+	if data[0] == 0 {
 		return nil, nil
 	}
 
 	var result DirectoryEntry
 
-	// Basic attributes
-	if data[0] == 0x05 {
-		data[0] = 0xE5
-	}
-
-	result.name = string(data[0:8])
-	result.ext = string(data[8:11])
+	// Do the attributes so we can determine if we're dealing with long names
 	result.attr = DirectoryAttr(data[11])
+	if (result.attr & AttrLongName) == AttrLongName {
+		result.longOrd = data[0]
 
-	// Creation time
-	createTimeTenths := data[13]
-	createTimeWord := binary.LittleEndian.Uint16(data[14:16])
-	createDateWord := binary.LittleEndian.Uint16(data[16:18])
-	result.createTime = decodeDOSTime(createDateWord, createTimeWord, createTimeTenths)
+		chars := make([]uint16, 13)
+		for i := 0; i < 5; i++ {
+			offset := 1 + (i * 2)
+			chars[i] = binary.LittleEndian.Uint16(data[offset : offset+2])
+		}
 
-	// Access time
-	accessDateWord := binary.LittleEndian.Uint16(data[18:20])
-	result.accessTime = decodeDOSTime(accessDateWord, 0, 0)
+		for i := 0; i < 6; i++ {
+			offset := 14 + (i * 2)
+			chars[i+5] = binary.LittleEndian.Uint16(data[offset : offset+2])
+		}
 
-	// Write time
-	writeTimeWord := binary.LittleEndian.Uint16(data[22:24])
-	writeDateWord := binary.LittleEndian.Uint16(data[24:26])
-	result.writeTime = decodeDOSTime(writeDateWord, writeTimeWord, 0)
+		for i := 0; i < 2; i++ {
+			offset := 28 + (i * 2)
+			chars[i+11] = binary.LittleEndian.Uint16(data[offset : offset+2])
+		}
 
-	// Cluster
-	result.cluster = uint32(binary.LittleEndian.Uint16(data[20:22]))
-	result.cluster <<= 4
-	result.cluster |= uint32(binary.LittleEndian.Uint16(data[26:28]))
+		result.longName = string(utf16.Decode(chars))
+		result.longChecksum = data[13]
+	} else {
+		if data[0] == 0xE5 {
+			return nil, nil
+		}
 
-	// File size
-	result.fileSize = binary.LittleEndian.Uint32(data[28:32])
+		// Basic attributes
+		if data[0] == 0x05 {
+			data[0] = 0xE5
+		}
+
+		result.name = string(data[0:8])
+		result.ext = string(data[8:11])
+
+		// Creation time
+		createTimeTenths := data[13]
+		createTimeWord := binary.LittleEndian.Uint16(data[14:16])
+		createDateWord := binary.LittleEndian.Uint16(data[16:18])
+		result.createTime = decodeDOSTime(createDateWord, createTimeWord, createTimeTenths)
+
+		// Access time
+		accessDateWord := binary.LittleEndian.Uint16(data[18:20])
+		result.accessTime = decodeDOSTime(accessDateWord, 0, 0)
+
+		// Write time
+		writeTimeWord := binary.LittleEndian.Uint16(data[22:24])
+		writeDateWord := binary.LittleEndian.Uint16(data[24:26])
+		result.writeTime = decodeDOSTime(writeDateWord, writeTimeWord, 0)
+
+		// Cluster
+		result.cluster = uint32(binary.LittleEndian.Uint16(data[20:22]))
+		result.cluster <<= 4
+		result.cluster |= uint32(binary.LittleEndian.Uint16(data[26:28]))
+
+		// File size
+		result.fileSize = binary.LittleEndian.Uint32(data[28:32])
+	}
 
 	return &result, nil
 }
