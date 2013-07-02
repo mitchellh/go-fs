@@ -9,4 +9,5 @@ type Directory interface {
 // which can be either another Directory or a File.
 type DirectoryEntry interface {
 	Name() string
+	IsDir() bool
 }

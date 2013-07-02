@@ -87,6 +87,10 @@ func DecodeDirectoryEntry(entries []*DirectoryClusterEntry) (*DirectoryEntry, []
 	return result, entries, nil
 }
 
+func (d *DirectoryEntry) IsDir() bool {
+	return (d.entry.attr & AttrDirectory) == AttrDirectory
+}
+
 func (d *DirectoryEntry) Name() string {
 	return d.name
 }
