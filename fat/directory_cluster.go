@@ -111,6 +111,11 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 	return result[:]
 }
 
+// IsLong returns true if this is a long entry.
+func (d *DirectoryClusterEntry) IsLong() bool {
+	return (d.attr & AttrLongName) == AttrLongName
+}
+
 // DecodeDirectoryClusterEntry decodes a single directory entry in the
 // Directory structure.
 func DecodeDirectoryClusterEntry(data []byte) (*DirectoryClusterEntry, error) {
