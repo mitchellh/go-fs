@@ -8,6 +8,7 @@ import (
 // FAT filesystem.
 type FileSystem struct {
 	bs      *BootSectorCommon
+	device  fs.BlockDevice
 	fat     *FAT
 	rootDir *DirectoryCluster
 }
@@ -37,6 +38,7 @@ func New(device fs.BlockDevice) (*FileSystem, error) {
 
 	result := &FileSystem{
 		bs:      bs,
+		device:  device,
 		fat:     fat,
 		rootDir: rootDir,
 	}
@@ -46,6 +48,7 @@ func New(device fs.BlockDevice) (*FileSystem, error) {
 
 func (f *FileSystem) RootDir() (fs.Directory, error) {
 	dir := &Directory{
+		device:     f.device,
 		dirCluster: f.rootDir,
 		fat:        f.fat,
 	}

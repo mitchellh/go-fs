@@ -9,6 +9,7 @@ import (
 // Directory implements fs.Directory and is used to interface with
 // a directory on a FAT filesystem.
 type Directory struct {
+	device     fs.BlockDevice
 	dirCluster *DirectoryCluster
 	fat        *FAT
 }
@@ -18,8 +19,9 @@ type Directory struct {
 // underlying directory entry data structures on the disk may be more
 // than one to accomodate for long filenames.
 type DirectoryEntry struct {
+	dir        *Directory
 	lfnEntries []*DirectoryClusterEntry
-	entry *DirectoryClusterEntry
+	entry      *DirectoryClusterEntry
 
 	name string
 }
@@ -27,7 +29,7 @@ type DirectoryEntry struct {
 // DecodeDirectoryEntry takes a list of entries, decodes the next full
 // DirectoryEntry, and returns the newly created entry, the remaining
 // entries, and an error, if there was one.
-func DecodeDirectoryEntry(entries []*DirectoryClusterEntry) (*DirectoryEntry, []*DirectoryClusterEntry, error) {
+func DecodeDirectoryEntry(d *Directory, entries []*DirectoryClusterEntry) (*DirectoryEntry, []*DirectoryClusterEntry, error) {
 	var lfnEntries []*DirectoryClusterEntry
 	var entry *DirectoryClusterEntry
 	var name string
@@ -51,7 +53,7 @@ func DecodeDirectoryEntry(entries []*DirectoryClusterEntry) (*DirectoryEntry, []
 		}
 
 		var nameBytes []rune
-		nameBytes = make([]rune, 13 * len(lfnEntries))
+		nameBytes = make([]rune, 13*len(lfnEntries))
 		for i := len(lfnEntries) - 1; i >= 0; i-- {
 			for _, char := range lfnEntries[i].longName {
 				nameBytes = append(nameBytes, char)
@@ -79,12 +81,33 @@ func DecodeDirectoryEntry(entries []*DirectoryClusterEntry) (*DirectoryEntry, []
 	}
 
 	result := &DirectoryEntry{
+		dir:        d,
 		lfnEntries: lfnEntries,
-		entry: entry,
-		name: name,
+		entry:      entry,
+		name:       name,
 	}
 
 	return result, entries, nil
+}
+
+func (d *DirectoryEntry) Dir() (fs.Directory, error) {
+	if !d.IsDir() {
+		panic("not a directory")
+	}
+
+	dirCluster, err := DecodeDirectoryCluster(
+		d.entry.cluster, d.dir.device, d.dir.fat)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &Directory{
+		device:     d.dir.device,
+		dirCluster: dirCluster,
+		fat:        d.dir.fat,
+	}
+
+	return result, nil
 }
 
 func (d *DirectoryEntry) IsDir() bool {
@@ -97,10 +120,10 @@ func (d *DirectoryEntry) Name() string {
 
 func (d *Directory) Entries() []fs.DirectoryEntry {
 	entries := d.dirCluster.entries
-	result := make([]fs.DirectoryEntry, 0, len(entries) / 2)
+	result := make([]fs.DirectoryEntry, 0, len(entries)/2)
 	for len(entries) > 0 {
 		var entry *DirectoryEntry
-		entry, entries, _ = DecodeDirectoryEntry(entries)
+		entry, entries, _ = DecodeDirectoryEntry(d, entries)
 		if entry != nil {
 			result = append(result, entry)
 		}

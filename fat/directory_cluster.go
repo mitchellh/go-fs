@@ -47,6 +47,23 @@ type DirectoryClusterEntry struct {
 	longChecksum uint8
 }
 
+func DecodeDirectoryCluster(startCluster uint32, device fs.BlockDevice, fat *FAT) (*DirectoryCluster, error) {
+	bs := fat.bs
+	chain := fat.Chain(startCluster)
+	data := make([]byte, uint32(len(chain))*bs.BytesPerCluster())
+	for i, clusterNumber := range chain {
+		dataOffset := uint32(i) * bs.BytesPerCluster()
+		devOffset := int64(bs.ClusterOffset(int(clusterNumber)))
+		chainData := data[dataOffset : dataOffset+bs.BytesPerCluster()]
+
+		if _, err := device.ReadAt(chainData, devOffset); err != nil {
+			return nil, err
+		}
+	}
+
+	return decodeDirectoryCluster(data, bs)
+}
+
 // DecodeFAT16RootDirectory decodes the FAT16 root directory structure
 // from the device.
 func DecodeFAT16RootDirectoryCluster(device fs.BlockDevice, bs *BootSectorCommon) (*DirectoryCluster, error) {
@@ -55,6 +72,10 @@ func DecodeFAT16RootDirectoryCluster(device fs.BlockDevice, bs *BootSectorCommon
 		return nil, err
 	}
 
+	return decodeDirectoryCluster(data, bs)
+}
+
+func decodeDirectoryCluster(data []byte, bs *BootSectorCommon) (*DirectoryCluster, error) {
 	entries := make([]*DirectoryClusterEntry, 0, bs.RootEntryCount)
 	for i := uint16(0); i < bs.RootEntryCount; i++ {
 		offset := i * DirectoryEntrySize

@@ -10,4 +10,5 @@ type Directory interface {
 type DirectoryEntry interface {
 	Name() string
 	IsDir() bool
+	Dir() (Directory, error)
 }

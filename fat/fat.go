@@ -5,6 +5,9 @@ import (
 	"github.com/mitchellh/go-fs"
 )
 
+// The first cluster that can really hold user data is always 2
+const FirstCluster = 2
+
 // FAT is the actual file allocation table data structure that is
 // stored on disk to describe the various clusters on the disk.
 type FAT struct {
@@ -79,6 +82,23 @@ func (f *FAT) Bytes() []byte {
 	return result
 }
 
+// Chain returns the chain of clusters starting at a certain cluster.
+func (f *FAT) Chain(start uint32) []uint32 {
+	chain := make([]uint32, 0, 2)
+
+	cluster := start
+	for {
+		chain = append(chain, cluster)
+		cluster = f.entries[cluster]
+
+		if f.isEofCluster(cluster) {
+			break
+		}
+	}
+
+	return chain
+}
+
 func (f *FAT) entryMask() uint32 {
 	switch f.bs.FATType() {
 	case FAT12:
@@ -88,6 +108,10 @@ func (f *FAT) entryMask() uint32 {
 	default:
 		return 0x0FFFFFFF
 	}
+}
+
+func (f *FAT) isEofCluster(cluster uint32) bool {
+	return cluster >= (0xFFFFFF8 & f.entryMask())
 }
 
 func (f *FAT) writeEntry12(data []byte, idx int, entry uint32) {

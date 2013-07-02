@@ -139,6 +139,26 @@ func (b *BootSectorCommon) Bytes() ([]byte, error) {
 	return sector[:], nil
 }
 
+// BytesPerCluster returns the number of bytes per cluster.
+func (b *BootSectorCommon) BytesPerCluster() uint32 {
+	return uint32(b.SectorsPerCluster) * uint32(b.BytesPerSector)
+}
+
+// ClusterOffset returns the offset of the data section of a particular
+// cluster.
+func (b *BootSectorCommon) ClusterOffset(n int) uint32 {
+	offset := b.DataOffset()
+	offset += (uint32(n) - FirstCluster) * b.BytesPerCluster()
+	return offset
+}
+
+// DataOffset returns the offset of the data section of the disk.
+func (b *BootSectorCommon) DataOffset() uint32 {
+	offset := uint32(b.RootDirOffset())
+	offset += uint32(b.RootEntryCount * DirectoryEntrySize)
+	return offset
+}
+
 // FATOffset returns the offset in bytes for the given index of the FAT
 func (b *BootSectorCommon) FATOffset(n int) int {
 	offset := uint32(b.ReservedSectorCount * b.BytesPerSector)
