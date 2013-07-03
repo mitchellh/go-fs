@@ -118,6 +118,24 @@ func (d *DirectoryEntry) Name() string {
 	return d.name
 }
 
+func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
+	name = strings.TrimSpace(name)
+
+	for _, entry := range d.Entries() {
+		// TODO(mitchellh): case sensitivity? I think fat ISNT sensitive.
+		if entry.Name() == name {
+			return nil, fmt.Errorf("name already exists: %s", name)
+		}
+	}
+
+	// TODO(mitchellh:
+	// * make the short name
+	// * allocate cluster space
+	// * create the entry
+	// * create the ., .. entries in the new directory
+	return nil, nil
+}
+
 func (d *Directory) Entries() []fs.DirectoryEntry {
 	entries := d.dirCluster.entries
 	result := make([]fs.DirectoryEntry, 0, len(entries)/2)
