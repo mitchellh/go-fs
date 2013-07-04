@@ -32,7 +32,7 @@ func generateShortName(longName string, used []string) (string, error) {
 	}
 
 	ext := cleanShortString(longName[dotIdx+1 : len(longName)])
-	ext = ext[0:3]
+	ext = ext[0:len(ext)]
 	rawName := longName[0:dotIdx]
 	name := cleanShortString(rawName)
 	simpleName := fmt.Sprintf("%s.%s", name, ext)
