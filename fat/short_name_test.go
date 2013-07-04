@@ -42,4 +42,14 @@ func TestGenerateShortName(t *testing.T) {
 	if result != "FOO~1.BAR" {
 		t.Fatalf("unexpected: %s", result)
 	}
+
+	// Test without a dot
+	result, err = generateShortName("BAM", []string{})
+	if err != nil {
+		t.Fatalf("err should be nil: %s", err)
+	}
+
+	if result != "BAM" {
+		t.Fatalf("unexpected: %s", result)
+	}
 }

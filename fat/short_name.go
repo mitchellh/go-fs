@@ -27,15 +27,22 @@ func generateShortName(longName string, used []string) (string, error) {
 
 	// Split the string at the final "."
 	dotIdx := strings.LastIndex(longName, ".")
+
+	var ext string
 	if dotIdx == -1 {
-		dotIdx = len(longName) - 1
+		dotIdx = len(longName)
+	} else {
+		ext = longName[dotIdx+1:len(longName)]
 	}
 
-	ext := cleanShortString(longName[dotIdx+1 : len(longName)])
+	ext = cleanShortString(ext)
 	ext = ext[0:len(ext)]
 	rawName := longName[0:dotIdx]
 	name := cleanShortString(rawName)
 	simpleName := fmt.Sprintf("%s.%s", name, ext)
+	if ext == "" {
+		simpleName = simpleName[0:len(simpleName)-1]
+	}
 
 	doSuffix := name != rawName || len(name) > 8
 	if !doSuffix {
