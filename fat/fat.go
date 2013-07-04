@@ -108,6 +108,9 @@ func (f *FAT) allocNew() (uint32, error) {
 		return 0, errors.New("FAT FULL")
 	}
 
+	// Mark that this is now in use
+	f.entries[availIdx] = 0xFFFFFFFF & f.entryMask()
+
 	return availIdx, nil
 }
 
@@ -139,10 +142,14 @@ func (f *FAT) ResizeChain(start uint32, length int) ([]uint32, error) {
 	change := int(math.Abs(float64(length - len(chain))))
 	if length > len(chain) {
 		var lastCluster uint32
-		i := 0
-		for chain[i] != 0 {
+
+		lastCluster = chain[0]
+		for i := 1; i < len(chain); i++ {
+			if f.isEofCluster(f.entries[lastCluster]) {
+				break
+			}
+
 			lastCluster = chain[i]
-			i++
 		}
 
 		for i := 0; i < change; i++ {

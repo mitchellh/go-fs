@@ -162,6 +162,10 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 
 	// Create the entry for the short name
 	shortParts := strings.Split(shortName, ".")
+	if len(shortParts) == 1 {
+		shortParts = append(shortParts, "")
+	}
+
 	shortEntry := new(DirectoryClusterEntry)
 	shortEntry.attr = AttrDirectory
 	shortEntry.name = shortParts[0]
