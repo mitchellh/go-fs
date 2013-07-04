@@ -31,7 +31,6 @@ const LastLongEntryMask = 0x40
 // entries/contents.
 type DirectoryCluster struct {
 	entries       []*DirectoryClusterEntry
-	entryCapacity uint32
 	fat16Root     bool
 	startCluster  uint32
 }
@@ -113,7 +112,6 @@ func decodeDirectoryCluster(data []byte, bs *BootSectorCommon) (*DirectoryCluste
 
 	result := &DirectoryCluster{
 		entries: entries,
-		entryCapacity: uint32(bs.RootEntryCount),
 	}
 
 	return result, nil
