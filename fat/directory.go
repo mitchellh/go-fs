@@ -172,8 +172,8 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 	d.dirCluster.entries = append(d.dirCluster.entries, shortEntry)
 
 	chain := &ClusterChain{
-		device: d.device,
-		fat: d.fat,
+		device:       d.device,
+		fat:          d.fat,
 		startCluster: d.dirCluster.startCluster,
 	}
 

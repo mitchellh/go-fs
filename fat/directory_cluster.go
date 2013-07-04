@@ -30,9 +30,9 @@ const LastLongEntryMask = 0x40
 // DirectoryCluster represents a cluster on the disk that contains
 // entries/contents.
 type DirectoryCluster struct {
-	entries       []*DirectoryClusterEntry
-	fat16Root     bool
-	startCluster  uint32
+	entries      []*DirectoryClusterEntry
+	fat16Root    bool
+	startCluster uint32
 }
 
 // DirectoryClusterEntry is a single 32-byte entry that is part of the
@@ -95,7 +95,7 @@ func DecodeFAT16RootDirectoryCluster(device fs.BlockDevice, bs *BootSectorCommon
 
 func decodeDirectoryCluster(data []byte, bs *BootSectorCommon) (*DirectoryCluster, error) {
 	entries := make([]*DirectoryClusterEntry, 0, bs.RootEntryCount)
-	for i := uint16(0); i < uint16(len(data) / DirectoryEntrySize); i++ {
+	for i := uint16(0); i < uint16(len(data)/DirectoryEntrySize); i++ {
 		offset := i * DirectoryEntrySize
 		entryData := data[offset : offset+DirectoryEntrySize]
 		if entryData[0] == 0 {

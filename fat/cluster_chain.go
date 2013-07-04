@@ -6,10 +6,10 @@ import (
 )
 
 type ClusterChain struct {
-	device fs.BlockDevice
-	fat *FAT
+	device       fs.BlockDevice
+	fat          *FAT
 	startCluster uint32
-	writeOffset uint32
+	writeOffset  uint32
 }
 
 // Write will write to the cluster chain, expanding it if necessary.
@@ -18,11 +18,11 @@ func (c *ClusterChain) Write(p []byte) (n int, err error) {
 	chain := c.fat.Chain(c.startCluster)
 	chainLength := uint32(len(chain)) * bpc
 
-	if chainLength < c.writeOffset + uint32(len(p)) {
+	if chainLength < c.writeOffset+uint32(len(p)) {
 		// We need to grow the chain
 		bytesNeeded := (c.writeOffset + uint32(len(p))) - chainLength
 		clustersNeeded := int(math.Ceil(float64(bytesNeeded) / float64(bpc)))
-		chain, err = c.fat.ResizeChain(c.startCluster, len(chain) + clustersNeeded)
+		chain, err = c.fat.ResizeChain(c.startCluster, len(chain)+clustersNeeded)
 		if err != nil {
 			return
 		}
