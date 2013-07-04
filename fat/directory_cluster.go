@@ -3,6 +3,7 @@ package fat
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"github.com/mitchellh/go-fs"
 	"math"
 	"time"
@@ -174,6 +175,37 @@ func (d *DirectoryCluster) Bytes() []byte {
 // Bytes returns the on-disk byte data for this directory entry.
 func (d *DirectoryClusterEntry) Bytes() []byte {
 	var result [DirectoryEntrySize]byte
+
+	// DIR_Name
+	simpleName := fmt.Sprintf("%s.%s", d.name, d.ext)
+	copy(result[0:11], shortNameEntryValue(simpleName))
+
+	// DIR_Attr
+	result[11] = byte(d.attr)
+
+	// DIR_CrtTime
+	crtDate, crtTime, crtTenths := encodeDOSTime(d.createTime)
+	result[13] = crtTenths
+	binary.LittleEndian.PutUint16(result[14:16], crtTime)
+	binary.LittleEndian.PutUint16(result[16:18], crtDate)
+
+	// DIR_LstAccDate
+	accDate, _, _ := encodeDOSTime(d.accessTime)
+	binary.LittleEndian.PutUint16(result[18:20], accDate)
+
+	// DIR_FstClusHI
+	binary.LittleEndian.PutUint16(result[12:13], uint16(d.cluster >> 16))
+
+	// DIR_WrtTime and DIR_WrtDate
+	wrtDate, wrtTime, _ := encodeDOSTime(d.writeTime)
+	binary.LittleEndian.PutUint16(result[22:24], wrtDate)
+	binary.LittleEndian.PutUint16(result[24:26], wrtTime)
+
+	// DIR_FstClusLO
+	binary.LittleEndian.PutUint16(result[26:28], uint16(d.cluster & 0xFFFF))
+
+	// DIR_FileSize
+
 	return result[:]
 }
 
@@ -295,4 +327,19 @@ func decodeDOSTime(date, dosTime uint16, tenths uint8) time.Time {
 		int((dosTime&0x1F)*2),
 		int(tenths)*10*int(time.Millisecond),
 		time.Local)
+}
+
+func encodeDOSTime(t time.Time) (uint16, uint16, uint8) {
+	var date uint16 = uint16((t.Year() - 1980) << 9)
+	date |= uint16(t.Month()) << 5
+	date += uint16(t.Day() & 0xFF)
+
+	var time uint16 = uint16(t.Hour() << 11)
+	time |= uint16(t.Minute() << 5)
+	time += uint16(t.Second() / 2)
+
+	var tenths uint8
+	// TODO(mitchellh): Do tenths
+
+	return date, time, tenths
 }
