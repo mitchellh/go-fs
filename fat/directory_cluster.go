@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/mitchellh/go-fs"
+	"math"
 	"time"
 	"unicode/utf16"
 )
@@ -23,10 +24,16 @@ const (
 // The size in bytes of a single directory entry.
 const DirectoryEntrySize = 32
 
+// Mask applied to the ord of the last long entry.
+const LastLongEntryMask = 0x40
+
 // DirectoryCluster represents a cluster on the disk that contains
 // entries/contents.
 type DirectoryCluster struct {
-	entries []*DirectoryClusterEntry
+	entries       []*DirectoryClusterEntry
+	entryCapacity uint32
+	fat16Root     bool
+	startCluster  uint32
 }
 
 // DirectoryClusterEntry is a single 32-byte entry that is part of the
@@ -61,7 +68,13 @@ func DecodeDirectoryCluster(startCluster uint32, device fs.BlockDevice, fat *FAT
 		}
 	}
 
-	return decodeDirectoryCluster(data, bs)
+	result, err := decodeDirectoryCluster(data, bs)
+	if err != nil {
+		return nil, err
+	}
+
+	result.startCluster = startCluster
+	return result, nil
 }
 
 // DecodeFAT16RootDirectory decodes the FAT16 root directory structure
@@ -72,12 +85,18 @@ func DecodeFAT16RootDirectoryCluster(device fs.BlockDevice, bs *BootSectorCommon
 		return nil, err
 	}
 
-	return decodeDirectoryCluster(data, bs)
+	result, err := decodeDirectoryCluster(data, bs)
+	if err != nil {
+		return nil, err
+	}
+
+	result.fat16Root = true
+	return result, nil
 }
 
 func decodeDirectoryCluster(data []byte, bs *BootSectorCommon) (*DirectoryCluster, error) {
 	entries := make([]*DirectoryClusterEntry, 0, bs.RootEntryCount)
-	for i := uint16(0); i < bs.RootEntryCount; i++ {
+	for i := uint16(0); i < uint16(len(data) / DirectoryEntrySize); i++ {
 		offset := i * DirectoryEntrySize
 		entryData := data[offset : offset+DirectoryEntrySize]
 		if entryData[0] == 0 {
@@ -94,6 +113,7 @@ func decodeDirectoryCluster(data []byte, bs *BootSectorCommon) (*DirectoryCluste
 
 	result := &DirectoryCluster{
 		entries: entries,
+		entryCapacity: uint32(bs.RootEntryCount),
 	}
 
 	return result, nil
@@ -201,6 +221,43 @@ func DecodeDirectoryClusterEntry(data []byte) (*DirectoryClusterEntry, error) {
 	}
 
 	return &result, nil
+}
+
+// NewLongDirectoryClusterEntry returns the series of directory cluster
+// entries that need to be written for a long directory entry. This list
+// of entries does NOT contain the short name entry.
+func NewLongDirectoryClusterEntry(name string, shortName string) ([]*DirectoryClusterEntry, error) {
+	// Split up the shortName properly
+	checksum := checksumShortName(shortNameEntryValue(shortName))
+
+	// Calcualte the number of entries we'll actually need to store
+	// the long name.
+	numLongEntries := len(name) / 13
+	if len(name)%13 != 0 {
+		numLongEntries++
+	}
+
+	entries := make([]*DirectoryClusterEntry, numLongEntries)
+	for i := 0; i < numLongEntries; i++ {
+		entries[i] = new(DirectoryClusterEntry)
+		entry := entries[i]
+		entry.attr = AttrLongName
+		entry.longOrd = uint8(numLongEntries - i)
+
+		if i == 0 {
+			entry.longOrd |= LastLongEntryMask
+		}
+
+		// Calculate the offsets of the string for this entry
+		i := (len(name) % 13) + (i * 13)
+		j := len(name) - i
+		k := int(math.Min(float64(j+13), float64(len(name))))
+
+		entry.longChecksum = checksum
+		entry.longName = name[j:k]
+	}
+
+	return entries, nil
 }
 
 func decodeDOSTime(date, dosTime uint16, tenths uint8) time.Time {

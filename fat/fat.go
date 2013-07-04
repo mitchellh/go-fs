@@ -1,8 +1,10 @@
 package fat
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mitchellh/go-fs"
+	"math"
 )
 
 // The first cluster that can really hold user data is always 2
@@ -82,6 +84,33 @@ func (f *FAT) Bytes() []byte {
 	return result
 }
 
+func (f *FAT) AllocChain() (uint32, error) {
+	return f.allocNew()
+}
+
+func (f *FAT) allocNew() (uint32, error) {
+	dataSize := (f.bs.TotalSectors * uint32(f.bs.BytesPerSector))
+	dataSize -= f.bs.DataOffset()
+	clusterCount := dataSize / f.bs.BytesPerCluster()
+	lastClusterIndex := clusterCount + FirstCluster
+
+	var availIdx uint32
+	found := false
+	for i := uint32(FirstCluster); i < lastClusterIndex; i++ {
+		if f.entries[i] == 0 {
+			availIdx = i
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return 0, errors.New("FAT FULL")
+	}
+
+	return availIdx, nil
+}
+
 // Chain returns the chain of clusters starting at a certain cluster.
 func (f *FAT) Chain(start uint32) []uint32 {
 	chain := make([]uint32, 0, 2)
@@ -97,6 +126,39 @@ func (f *FAT) Chain(start uint32) []uint32 {
 	}
 
 	return chain
+}
+
+// ResizeChain takes a given cluster number and resizes the chain
+// to the given length. It returns the new chain of clusters.
+func (f *FAT) ResizeChain(start uint32, length int) ([]uint32, error) {
+	chain := f.Chain(start)
+	if len(chain) == length {
+		return chain, nil
+	}
+
+	change := int(math.Abs(float64(length - len(chain))))
+	if length > len(chain) {
+		var lastCluster uint32
+		i := 0
+		for chain[i] != 0 {
+			lastCluster = chain[i]
+			i++
+		}
+
+		for i := 0; i < change; i++ {
+			newCluster, err := f.allocNew()
+			if err != nil {
+				return nil, err
+			}
+
+			f.entries[lastCluster] = newCluster
+			lastCluster = newCluster
+		}
+	} else {
+		panic("making chains smaller not implemented yet")
+	}
+
+	return f.Chain(start), nil
 }
 
 func (f *FAT) entryMask() uint32 {

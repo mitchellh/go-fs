@@ -118,21 +118,72 @@ func (d *DirectoryEntry) Name() string {
 	return d.name
 }
 
+func (d *DirectoryEntry) ShortName() string {
+	return fmt.Sprintf("%s.%s", d.entry.name, d.entry.ext)
+}
+
 func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 	name = strings.TrimSpace(name)
 
-	for _, entry := range d.Entries() {
+	entries := d.Entries()
+	usedNames := make([]string, 0, len(entries))
+	for _, entry := range entries {
 		// TODO(mitchellh): case sensitivity? I think fat ISNT sensitive.
 		if entry.Name() == name {
 			return nil, fmt.Errorf("name already exists: %s", name)
 		}
+
+		// Add it to the list of used names
+		dirEntry := entry.(*DirectoryEntry)
+		usedNames = append(usedNames, dirEntry.ShortName())
+	}
+
+	shortName, err := generateShortName(name, usedNames)
+	if err != nil {
+		return nil, err
+	}
+
+	var lfnEntries []*DirectoryClusterEntry
+	if shortName != strings.ToUpper(name) {
+		lfnEntries, err = NewLongDirectoryClusterEntry(name, shortName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Allocate space for a cluster
+	startCluster, err := d.fat.AllocChain()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the entry for the short name
+	shortParts := strings.Split(shortName, ".")
+	shortEntry := new(DirectoryClusterEntry)
+	shortEntry.attr = AttrDirectory
+	shortEntry.name = shortParts[0]
+	shortEntry.ext = shortParts[1]
+	shortEntry.cluster = startCluster
+
+	// Write the entries out in this directory
+	if lfnEntries != nil {
+		d.dirCluster.entries = append(d.dirCluster.entries, lfnEntries...)
+	}
+	d.dirCluster.entries = append(d.dirCluster.entries, shortEntry)
+
+	chain := &ClusterChain{
+		device: d.device,
+		fat: d.fat,
+		startCluster: d.dirCluster.startCluster,
+	}
+
+	if _, err := chain.Write(d.dirCluster.Bytes()); err != nil {
+		return nil, err
 	}
 
 	// TODO(mitchellh:
-	// * make the short name
-	// * allocate cluster space
-	// * create the entry
 	// * create the ., .. entries in the new directory
+	// * write the new directory cluster
 	return nil, nil
 }
 

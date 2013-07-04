@@ -6,6 +6,17 @@ import (
 	"strings"
 )
 
+// checksumShortName returns the checksum for the shortname that is used
+// for the long name entries.
+func checksumShortName(name string) uint8 {
+	var sum uint8 = name[0]
+	for i := uint8(1); i < 11; i++ {
+		sum = name[i] + (((sum & 1) << 7) + ((sum & 0xFE) >> 1))
+	}
+
+	return sum
+}
+
 // generateShortName takes a list of existing short names and a long
 // name and generates the next valid short name. This process is done
 // according to the MS specification.
@@ -17,10 +28,10 @@ func generateShortName(longName string, used []string) (string, error) {
 	// Split the string at the final "."
 	dotIdx := strings.LastIndex(longName, ".")
 	if dotIdx == -1 {
-		dotIdx = len(longName)-1
+		dotIdx = len(longName) - 1
 	}
 
-	ext := cleanShortString(longName[dotIdx+1:len(longName)])
+	ext := cleanShortString(longName[dotIdx+1 : len(longName)])
 	ext = ext[0:3]
 	rawName := longName[0:dotIdx]
 	name := cleanShortString(rawName)
@@ -69,6 +80,31 @@ func generateShortName(longName string, used []string) (string, error) {
 	}
 
 	return simpleName, nil
+}
+
+// shortNameEntryValue returns the proper formatted short name value
+// for the directory cluster entry.
+func shortNameEntryValue(name string) string {
+	shortParts := strings.Split(name, ".")
+	if len(shortParts[0]) < 8 {
+		var temp bytes.Buffer
+		for i := 0; i < 8-len(shortParts[0]); i++ {
+			temp.WriteRune(' ')
+		}
+
+		shortParts[0] = temp.String()
+	}
+
+	if len(shortParts[1]) < 3 {
+		var temp bytes.Buffer
+		for i := 0; i < 3-len(shortParts[1]); i++ {
+			temp.WriteRune(' ')
+		}
+
+		shortParts[1] = temp.String()
+	}
+
+	return fmt.Sprintf("%s%s", shortParts[0], shortParts[1])
 }
 
 func cleanShortString(v string) string {
