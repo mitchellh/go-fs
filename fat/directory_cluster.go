@@ -1,6 +1,7 @@
 package fat
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -176,35 +177,82 @@ func (d *DirectoryCluster) Bytes() []byte {
 func (d *DirectoryClusterEntry) Bytes() []byte {
 	var result [DirectoryEntrySize]byte
 
-	// DIR_Name
-	simpleName := fmt.Sprintf("%s.%s", d.name, d.ext)
-	copy(result[0:11], shortNameEntryValue(simpleName))
+	if d.longName != "" {
+		runes := bytes.Runes([]byte(d.longName))
 
-	// DIR_Attr
-	result[11] = byte(d.attr)
+		// LDIR_Ord
+		result[0] = d.longOrd
 
-	// DIR_CrtTime
-	crtDate, crtTime, crtTenths := encodeDOSTime(d.createTime)
-	result[13] = crtTenths
-	binary.LittleEndian.PutUint16(result[14:16], crtTime)
-	binary.LittleEndian.PutUint16(result[16:18], crtDate)
+		// LDIR_Name1
+		for i := 0; i < int(math.Min(float64(len(runes)), 5)); i++ {
+			offset := 1 + (i * 2)
+			data := result[offset:offset+2]
+			binary.LittleEndian.PutUint16(data, uint16(runes[i]))
+		}
 
-	// DIR_LstAccDate
-	accDate, _, _ := encodeDOSTime(d.accessTime)
-	binary.LittleEndian.PutUint16(result[18:20], accDate)
+		// LDIR_Attr
+		result[11] = byte(AttrLongName)
 
-	// DIR_FstClusHI
-	binary.LittleEndian.PutUint16(result[12:13], uint16(d.cluster >> 16))
+		// LDIR_Type
+		result[12] = 0
 
-	// DIR_WrtTime and DIR_WrtDate
-	wrtDate, wrtTime, _ := encodeDOSTime(d.writeTime)
-	binary.LittleEndian.PutUint16(result[22:24], wrtDate)
-	binary.LittleEndian.PutUint16(result[24:26], wrtTime)
+		// LDIR_Chksum
+		result[13] = d.longChecksum
 
-	// DIR_FstClusLO
-	binary.LittleEndian.PutUint16(result[26:28], uint16(d.cluster & 0xFFFF))
+		// LDIR_Name2
+		if len(runes) > 5 {
+			limit := int(math.Min(float64(len(runes)), 11)) - 5
+			for i := 0; i < limit; i++ {
+				offset := 14 + (i * 2)
+				data := result[offset:offset+2]
+				binary.LittleEndian.PutUint16(data, uint16(runes[i+5]))
+			}
+		}
 
-	// DIR_FileSize
+		// LDIR_FstClusLO
+		result[26] = 0
+		result[27] = 0
+
+		// LDIR_Name3
+		if len(runes) > 11 {
+			limit := int(math.Min(float64(len(runes)), 13)) - 11
+			for i := 0; i < limit; i++ {
+				offset := 28 + (i * 2)
+				data := result[offset:offset+2]
+				binary.LittleEndian.PutUint16(data, uint16(runes[i+11]))
+			}
+		}
+	} else {
+		// DIR_Name
+		simpleName := fmt.Sprintf("%s.%s", d.name, d.ext)
+		copy(result[0:11], shortNameEntryValue(simpleName))
+
+		// DIR_Attr
+		result[11] = byte(d.attr)
+
+		// DIR_CrtTime
+		crtDate, crtTime, crtTenths := encodeDOSTime(d.createTime)
+		result[13] = crtTenths
+		binary.LittleEndian.PutUint16(result[14:16], crtTime)
+		binary.LittleEndian.PutUint16(result[16:18], crtDate)
+
+		// DIR_LstAccDate
+		accDate, _, _ := encodeDOSTime(d.accessTime)
+		binary.LittleEndian.PutUint16(result[18:20], accDate)
+
+		// DIR_FstClusHI
+		binary.LittleEndian.PutUint16(result[12:13], uint16(d.cluster >> 16))
+
+		// DIR_WrtTime and DIR_WrtDate
+		wrtDate, wrtTime, _ := encodeDOSTime(d.writeTime)
+		binary.LittleEndian.PutUint16(result[22:24], wrtDate)
+		binary.LittleEndian.PutUint16(result[24:26], wrtTime)
+
+		// DIR_FstClusLO
+		binary.LittleEndian.PutUint16(result[26:28], uint16(d.cluster & 0xFFFF))
+
+		// DIR_FileSize
+	}
 
 	return result[:]
 }
