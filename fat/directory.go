@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/mitchellh/go-fs"
 	"strings"
+	"time"
 )
 
 // Directory implements fs.Directory and is used to interface with
@@ -157,6 +158,8 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 		return nil, err
 	}
 
+	createTime := time.Now()
+
 	// Create the entry for the short name
 	shortParts := strings.Split(shortName, ".")
 	shortEntry := new(DirectoryClusterEntry)
@@ -164,6 +167,9 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 	shortEntry.name = shortParts[0]
 	shortEntry.ext = shortParts[1]
 	shortEntry.cluster = startCluster
+	shortEntry.accessTime = createTime
+	shortEntry.createTime = createTime
+	shortEntry.writeTime = createTime
 
 	// Write the entries out in this directory
 	if lfnEntries != nil {
@@ -181,10 +187,33 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 		return nil, err
 	}
 
-	// TODO(mitchellh:
-	// * create the ., .. entries in the new directory
-	// * write the new directory cluster
-	return nil, nil
+	// Create the new directory cluster
+	newDirCluster := NewDirectoryCluster(
+		startCluster, d.dirCluster.startCluster, createTime)
+
+	chain = &ClusterChain{
+		device:       d.device,
+		fat:          d.fat,
+		startCluster: newDirCluster.startCluster,
+	}
+
+	if _, err := chain.Write(d.dirCluster.Bytes()); err != nil {
+		return nil, err
+	}
+
+	newDir := &Directory{
+		device:     d.device,
+		dirCluster: newDirCluster,
+		fat:        d.fat,
+	}
+
+	newEntry := &DirectoryEntry{
+		dir:        newDir,
+		lfnEntries: lfnEntries,
+		entry:      shortEntry,
+	}
+
+	return newEntry, nil
 }
 
 func (d *Directory) Entries() []fs.DirectoryEntry {

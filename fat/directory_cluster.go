@@ -117,6 +117,33 @@ func decodeDirectoryCluster(data []byte, bs *BootSectorCommon) (*DirectoryCluste
 	return result, nil
 }
 
+func NewDirectoryCluster(start uint32, parent uint32, t time.Time) *DirectoryCluster {
+	cluster := new(DirectoryCluster)
+	cluster.startCluster = start
+
+	// Create the "." and ".." entries
+	cluster.entries = []*DirectoryClusterEntry{
+		&DirectoryClusterEntry{
+			accessTime: t,
+			attr:       AttrDirectory,
+			cluster:    start,
+			createTime: t,
+			name:       ".",
+			writeTime:  t,
+		},
+		&DirectoryClusterEntry{
+			accessTime: t,
+			attr:       AttrDirectory,
+			cluster:    parent,
+			createTime: t,
+			name:       "..",
+			writeTime:  t,
+		},
+	}
+
+	return cluster
+}
+
 // NewFat16RootDirectory creates a new DirectoryCluster that is meant only
 // to be the root directory of a FAT12/FAT16 filesystem.
 func NewFat16RootDirectoryCluster(bs *BootSectorCommon) (*DirectoryCluster, error) {
