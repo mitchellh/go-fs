@@ -175,19 +175,18 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 	shortEntry.createTime = createTime
 	shortEntry.writeTime = createTime
 
+	// Write the new FAT out
+	if err := d.fat.WriteToDevice(d.device); err != nil {
+		return nil, err
+	}
+
 	// Write the entries out in this directory
 	if lfnEntries != nil {
 		d.dirCluster.entries = append(d.dirCluster.entries, lfnEntries...)
 	}
 	d.dirCluster.entries = append(d.dirCluster.entries, shortEntry)
 
-	chain := &ClusterChain{
-		device:       d.device,
-		fat:          d.fat,
-		startCluster: d.dirCluster.startCluster,
-	}
-
-	if _, err := chain.Write(d.dirCluster.Bytes()); err != nil {
+	if err := d.dirCluster.WriteToDevice(d.device, d.fat); err != nil {
 		return nil, err
 	}
 
@@ -195,13 +194,7 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 	newDirCluster := NewDirectoryCluster(
 		startCluster, d.dirCluster.startCluster, createTime)
 
-	chain = &ClusterChain{
-		device:       d.device,
-		fat:          d.fat,
-		startCluster: newDirCluster.startCluster,
-	}
-
-	if _, err := chain.Write(d.dirCluster.Bytes()); err != nil {
+	if err := newDirCluster.WriteToDevice(d.device, d.fat); err != nil {
 		return nil, err
 	}
 

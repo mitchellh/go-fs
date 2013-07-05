@@ -168,6 +168,18 @@ func (f *FAT) ResizeChain(start uint32, length int) ([]uint32, error) {
 	return f.Chain(start), nil
 }
 
+func (f *FAT) WriteToDevice(device fs.BlockDevice) error {
+	fatBytes := f.Bytes()
+	for i := 0; i < int(f.bs.NumFATs); i++ {
+		offset := int64(f.bs.FATOffset(i))
+		if _, err := device.WriteAt(fatBytes, offset); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (f *FAT) entryMask() uint32 {
 	switch f.bs.FATType() {
 	case FAT12:

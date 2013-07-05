@@ -173,6 +173,29 @@ func (d *DirectoryCluster) Bytes() []byte {
 	return result
 }
 
+// WriteToDevice writes the cluster to the device.
+func (d *DirectoryCluster) WriteToDevice(device fs.BlockDevice, fat *FAT) error {
+	if d.fat16Root {
+		// Write the cluster to the FAT16 root directory location
+		offset := int64(fat.bs.RootDirOffset())
+		if _, err := device.WriteAt(d.Bytes(), offset); err != nil {
+			return err
+		}
+	} else {
+		chain := &ClusterChain{
+			device:       device,
+			fat:          fat,
+			startCluster: d.startCluster,
+		}
+
+		if _, err := chain.Write(d.Bytes()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Bytes returns the on-disk byte data for this directory entry.
 func (d *DirectoryClusterEntry) Bytes() []byte {
 	var result [DirectoryEntrySize]byte
@@ -186,7 +209,7 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 		// LDIR_Name1
 		for i := 0; i < int(math.Min(float64(len(runes)), 5)); i++ {
 			offset := 1 + (i * 2)
-			data := result[offset:offset+2]
+			data := result[offset : offset+2]
 			binary.LittleEndian.PutUint16(data, uint16(runes[i]))
 		}
 
@@ -204,7 +227,7 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 			limit := int(math.Min(float64(len(runes)), 11)) - 5
 			for i := 0; i < limit; i++ {
 				offset := 14 + (i * 2)
-				data := result[offset:offset+2]
+				data := result[offset : offset+2]
 				binary.LittleEndian.PutUint16(data, uint16(runes[i+5]))
 			}
 		}
@@ -218,7 +241,7 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 			limit := int(math.Min(float64(len(runes)), 13)) - 11
 			for i := 0; i < limit; i++ {
 				offset := 28 + (i * 2)
-				data := result[offset:offset+2]
+				data := result[offset : offset+2]
 				binary.LittleEndian.PutUint16(data, uint16(runes[i+11]))
 			}
 		}
@@ -241,7 +264,7 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 		binary.LittleEndian.PutUint16(result[18:20], accDate)
 
 		// DIR_FstClusHI
-		binary.LittleEndian.PutUint16(result[20:22], uint16(d.cluster >> 16))
+		binary.LittleEndian.PutUint16(result[20:22], uint16(d.cluster>>16))
 
 		// DIR_WrtTime and DIR_WrtDate
 		wrtDate, wrtTime, _ := encodeDOSTime(d.writeTime)
@@ -249,7 +272,7 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 		binary.LittleEndian.PutUint16(result[24:26], wrtTime)
 
 		// DIR_FstClusLO
-		binary.LittleEndian.PutUint16(result[26:28], uint16(d.cluster & 0xFFFF))
+		binary.LittleEndian.PutUint16(result[26:28], uint16(d.cluster&0xFFFF))
 
 		// DIR_FileSize
 	}

@@ -32,7 +32,7 @@ func generateShortName(longName string, used []string) (string, error) {
 	if dotIdx == -1 {
 		dotIdx = len(longName)
 	} else {
-		ext = longName[dotIdx+1:len(longName)]
+		ext = longName[dotIdx+1 : len(longName)]
 	}
 
 	ext = cleanShortString(ext)
@@ -41,7 +41,7 @@ func generateShortName(longName string, used []string) (string, error) {
 	name := cleanShortString(rawName)
 	simpleName := fmt.Sprintf("%s.%s", name, ext)
 	if ext == "" {
-		simpleName = simpleName[0:len(simpleName)-1]
+		simpleName = simpleName[0 : len(simpleName)-1]
 	}
 
 	doSuffix := name != rawName || len(name) > 8

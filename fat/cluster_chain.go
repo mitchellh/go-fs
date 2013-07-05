@@ -1,6 +1,7 @@
 package fat
 
 import (
+	"fmt"
 	"github.com/mitchellh/go-fs"
 	"math"
 )
@@ -28,18 +29,14 @@ func (c *ClusterChain) Write(p []byte) (n int, err error) {
 		}
 
 		// Write the FAT out
-		fatBytes := c.fat.Bytes()
-		for i := 0; i < int(c.fat.bs.NumFATs); i++ {
-			offset := int64(c.fat.bs.FATOffset(i))
-			if _, err = c.device.WriteAt(fatBytes, offset); err != nil {
-				return
-			}
+		if err = c.fat.WriteToDevice(c.device); err != nil {
+			return
 		}
 	}
 
 	dataOffset := uint32(0)
-	chainIdx := c.writeOffset / bpc
 	for dataOffset < uint32(len(p)) {
+		chainIdx := c.writeOffset / bpc
 		clusterOffset := c.fat.bs.ClusterOffset(int(chain[chainIdx]))
 		clusterOffset += c.writeOffset % bpc
 		dataOffsetEnd := dataOffset + bpc
@@ -47,6 +44,9 @@ func (c *ClusterChain) Write(p []byte) (n int, err error) {
 		dataOffsetEnd = uint32(math.Min(float64(dataOffsetEnd), float64(len(p))))
 
 		var nw int
+		fmt.Printf("CHAIN IDX: %d\n", chainIdx)
+		fmt.Printf("WRITING CLUSTER: %d at %d\n", chain[chainIdx], clusterOffset)
+		fmt.Printf("WRITING DATA: %d : %d\n", dataOffset, dataOffsetEnd)
 		nw, err = c.device.WriteAt(p[dataOffset:dataOffsetEnd], int64(clusterOffset))
 		if err != nil {
 			return

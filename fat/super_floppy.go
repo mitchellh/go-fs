@@ -129,12 +129,9 @@ func (f *superFloppyFormatter) format() error {
 		return err
 	}
 
-	fatBytes := fat.Bytes()
-	for i := 0; i < int(bsCommon.NumFATs); i++ {
-		offset := int64(bsCommon.FATOffset(i))
-		if _, err := f.device.WriteAt(fatBytes, offset); err != nil {
-			return err
-		}
+	// Write the FAT
+	if err := fat.WriteToDevice(f.device); err != nil {
+		return err
 	}
 
 	var rootDir *DirectoryCluster
