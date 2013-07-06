@@ -178,10 +178,12 @@ func (d *DirectoryCluster) WriteToDevice(device fs.BlockDevice, fat *FAT) error 
 	if d.fat16Root {
 		// Write the cluster to the FAT16 root directory location
 		offset := int64(fat.bs.RootDirOffset())
+		fmt.Printf("WRITING ROOT TO %d\n", offset)
 		if _, err := device.WriteAt(d.Bytes(), offset); err != nil {
 			return err
 		}
 	} else {
+		fmt.Printf("WRITING CHAIN: %d\n", d.startCluster)
 		chain := &ClusterChain{
 			device:       device,
 			fat:          fat,
@@ -247,7 +249,12 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 		}
 	} else {
 		// DIR_Name
-		simpleName := fmt.Sprintf("%s.%s", d.name, d.ext)
+		var simpleName string
+		if d.name == "." || d.name == ".." {
+			simpleName = d.name
+		} else {
+			simpleName = fmt.Sprintf("%s.%s", d.name, d.ext)
+		}
 		copy(result[0:11], shortNameEntryValue(simpleName))
 
 		// DIR_Attr

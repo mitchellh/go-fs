@@ -92,7 +92,13 @@ func generateShortName(longName string, used []string) (string, error) {
 // shortNameEntryValue returns the proper formatted short name value
 // for the directory cluster entry.
 func shortNameEntryValue(name string) string {
-	shortParts := strings.Split(name, ".")
+	var shortParts []string
+	if name == "." || name == ".." {
+		shortParts = []string{name, ""}
+	} else {
+		shortParts = strings.Split(name, ".")
+	}
+
 	if len(shortParts[0]) < 8 {
 		var temp bytes.Buffer
 		for i := 0; i < 8-len(shortParts[0]); i++ {
