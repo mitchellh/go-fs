@@ -79,3 +79,12 @@ if err != nil {
 	panic(err)
 }
 ```
+
+## Thanks
+
+Thanks to the following resources which helped in the creation of this
+library:
+
+* [fat32-lib](https://code.google.com/p/fat32-lib/)
+* [File Allocation Table on Wikipedia](http://en.wikipedia.org/wiki/File_Allocation_Table)
+* Microsoft FAT filesystem specification
