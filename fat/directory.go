@@ -133,8 +133,7 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 	entries := d.Entries()
 	usedNames := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		// TODO(mitchellh): case sensitivity? I think fat ISNT sensitive.
-		if entry.Name() == name {
+		if strings.ToUpper(entry.Name()) == strings.ToUpper(name) {
 			return nil, fmt.Errorf("name already exists: %s", name)
 		}
 
