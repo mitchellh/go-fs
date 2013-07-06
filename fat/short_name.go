@@ -101,6 +101,7 @@ func shortNameEntryValue(name string) string {
 
 	if len(shortParts[0]) < 8 {
 		var temp bytes.Buffer
+		temp.WriteString(shortParts[0])
 		for i := 0; i < 8-len(shortParts[0]); i++ {
 			temp.WriteRune(' ')
 		}
@@ -110,6 +111,7 @@ func shortNameEntryValue(name string) string {
 
 	if len(shortParts[1]) < 3 {
 		var temp bytes.Buffer
+		temp.WriteString(shortParts[1])
 		for i := 0; i < 3-len(shortParts[1]); i++ {
 			temp.WriteRune(' ')
 		}
