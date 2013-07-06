@@ -120,6 +120,10 @@ func (d *DirectoryEntry) Name() string {
 }
 
 func (d *DirectoryEntry) ShortName() string {
+	if d.entry.name == "." || d.entry.name == ".." {
+		return d.entry.name
+	}
+
 	return fmt.Sprintf("%s.%s", d.entry.name, d.entry.ext)
 }
 
