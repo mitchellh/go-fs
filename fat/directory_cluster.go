@@ -275,8 +275,8 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 
 		// DIR_WrtTime and DIR_WrtDate
 		wrtDate, wrtTime, _ := encodeDOSTime(d.writeTime)
-		binary.LittleEndian.PutUint16(result[22:24], wrtDate)
-		binary.LittleEndian.PutUint16(result[24:26], wrtTime)
+		binary.LittleEndian.PutUint16(result[22:24], wrtTime)
+		binary.LittleEndian.PutUint16(result[24:26], wrtDate)
 
 		// DIR_FstClusLO
 		binary.LittleEndian.PutUint16(result[26:28], uint16(d.cluster&0xFFFF))
