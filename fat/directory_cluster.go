@@ -282,6 +282,7 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 		binary.LittleEndian.PutUint16(result[26:28], uint16(d.cluster&0xFFFF))
 
 		// DIR_FileSize
+		binary.LittleEndian.PutUint32(result[28:32], d.fileSize)
 	}
 
 	return result[:]

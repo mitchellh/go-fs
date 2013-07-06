@@ -122,6 +122,8 @@ func (d *DirectoryEntry) File() (fs.File, error) {
 			fat:          d.dir.fat,
 			startCluster: d.entry.cluster,
 		},
+		dir: d.dir,
+		entry: d.entry,
 	}
 
 	return result, nil
