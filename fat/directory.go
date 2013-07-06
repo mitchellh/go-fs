@@ -122,7 +122,7 @@ func (d *DirectoryEntry) File() (fs.File, error) {
 			fat:          d.dir.fat,
 			startCluster: d.entry.cluster,
 		},
-		dir: d.dir,
+		dir:   d.dir,
 		entry: d.entry,
 	}
 
@@ -146,6 +146,58 @@ func (d *DirectoryEntry) ShortName() string {
 }
 
 func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
+	entry, err := d.addEntry(name, AttrDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the new directory cluster
+	newDirCluster := NewDirectoryCluster(
+		entry.entry.cluster, d.dirCluster.startCluster, entry.entry.createTime)
+
+	if err := newDirCluster.WriteToDevice(d.device, d.fat); err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
+func (d *Directory) AddFile(name string) (fs.DirectoryEntry, error) {
+	entry, err := d.addEntry(name, DirectoryAttr(0))
+	if err != nil {
+		return nil, err
+	}
+
+	return entry, nil
+}
+
+func (d *Directory) Entries() []fs.DirectoryEntry {
+	entries := d.dirCluster.entries
+	result := make([]fs.DirectoryEntry, 0, len(entries)/2)
+	for len(entries) > 0 {
+		var entry *DirectoryEntry
+		entry, entries, _ = DecodeDirectoryEntry(d, entries)
+		if entry != nil {
+			result = append(result, entry)
+		}
+	}
+
+	return result
+}
+
+func (d *Directory) Entry(name string) fs.DirectoryEntry {
+	name = strings.ToUpper(name)
+
+	for _, entry := range d.Entries() {
+		if strings.ToUpper(entry.Name()) == name {
+			return entry
+		}
+	}
+
+	return nil
+}
+
+func (d *Directory) addEntry(name string, attr DirectoryAttr) (*DirectoryEntry, error) {
 	name = strings.TrimSpace(name)
 
 	entries := d.Entries()
@@ -188,7 +240,7 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 	}
 
 	shortEntry := new(DirectoryClusterEntry)
-	shortEntry.attr = AttrDirectory
+	shortEntry.attr = attr
 	shortEntry.name = shortParts[0]
 	shortEntry.ext = shortParts[1]
 	shortEntry.cluster = startCluster
@@ -211,51 +263,11 @@ func (d *Directory) AddDirectory(name string) (fs.DirectoryEntry, error) {
 		return nil, err
 	}
 
-	// Create the new directory cluster
-	newDirCluster := NewDirectoryCluster(
-		startCluster, d.dirCluster.startCluster, createTime)
-
-	if err := newDirCluster.WriteToDevice(d.device, d.fat); err != nil {
-		return nil, err
-	}
-
-	newDir := &Directory{
-		device:     d.device,
-		dirCluster: newDirCluster,
-		fat:        d.fat,
-	}
-
 	newEntry := &DirectoryEntry{
-		dir:        newDir,
+		dir:        d,
 		lfnEntries: lfnEntries,
 		entry:      shortEntry,
 	}
 
 	return newEntry, nil
-}
-
-func (d *Directory) Entries() []fs.DirectoryEntry {
-	entries := d.dirCluster.entries
-	result := make([]fs.DirectoryEntry, 0, len(entries)/2)
-	for len(entries) > 0 {
-		var entry *DirectoryEntry
-		entry, entries, _ = DecodeDirectoryEntry(d, entries)
-		if entry != nil {
-			result = append(result, entry)
-		}
-	}
-
-	return result
-}
-
-func (d *Directory) Entry(name string) fs.DirectoryEntry {
-	name = strings.ToUpper(name)
-
-	for _, entry := range d.Entries() {
-		if strings.ToUpper(entry.Name()) == name {
-			return entry
-		}
-	}
-
-	return nil
 }

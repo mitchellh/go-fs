@@ -5,6 +5,7 @@ type Directory interface {
 	Entry(name string) DirectoryEntry
 	Entries() []DirectoryEntry
 	AddDirectory(name string) (DirectoryEntry, error)
+	AddFile(name string) (DirectoryEntry, error)
 }
 
 // DirectoryEntry represents a single entry within a directory,

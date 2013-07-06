@@ -4,7 +4,7 @@ import ()
 
 type File struct {
 	chain *ClusterChain
-	dir *Directory
+	dir   *Directory
 	entry *DirectoryClusterEntry
 }
 

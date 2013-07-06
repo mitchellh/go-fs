@@ -10,7 +10,7 @@ type ClusterChain struct {
 	device       fs.BlockDevice
 	fat          *FAT
 	startCluster uint32
-	readOffset uint32
+	readOffset   uint32
 	writeOffset  uint32
 }
 
