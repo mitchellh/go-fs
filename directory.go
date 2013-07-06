@@ -2,6 +2,7 @@ package fs
 
 // Directory is an entry in a filesystem that stores files.
 type Directory interface {
+	Entry(name string) DirectoryEntry
 	Entries() []DirectoryEntry
 	AddDirectory(name string) (DirectoryEntry, error)
 }
@@ -12,4 +13,5 @@ type DirectoryEntry interface {
 	Name() string
 	IsDir() bool
 	Dir() (Directory, error)
+	File() (File, error)
 }

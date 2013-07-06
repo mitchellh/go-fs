@@ -121,9 +121,11 @@ func (f *FAT) Chain(start uint32) []uint32 {
 	cluster := start
 	for {
 		chain = append(chain, cluster)
+		fmt.Printf("GETTING ENTRY FOR %d: ", cluster)
 		cluster = f.entries[cluster]
+		fmt.Printf("%d\n", cluster)
 
-		if f.isEofCluster(cluster) {
+		if f.isEofCluster(cluster) || cluster == 0 {
 			break
 		}
 	}

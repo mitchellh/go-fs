@@ -111,6 +111,22 @@ func (d *DirectoryEntry) Dir() (fs.Directory, error) {
 	return result, nil
 }
 
+func (d *DirectoryEntry) File() (fs.File, error) {
+	if d.IsDir() {
+		panic("not a file")
+	}
+
+	result := &File{
+		chain: &ClusterChain{
+			device:       d.dir.device,
+			fat:          d.dir.fat,
+			startCluster: d.entry.cluster,
+		},
+	}
+
+	return result, nil
+}
+
 func (d *DirectoryEntry) IsDir() bool {
 	return (d.entry.attr & AttrDirectory) == AttrDirectory
 }
@@ -228,4 +244,16 @@ func (d *Directory) Entries() []fs.DirectoryEntry {
 	}
 
 	return result
+}
+
+func (d *Directory) Entry(name string) fs.DirectoryEntry {
+	name = strings.ToUpper(name)
+
+	for _, entry := range d.Entries() {
+		if strings.ToUpper(entry.Name()) == name {
+			return entry
+		}
+	}
+
+	return nil
 }
