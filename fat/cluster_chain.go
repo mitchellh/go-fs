@@ -1,7 +1,6 @@
 package fat
 
 import (
-	"fmt"
 	"github.com/mitchellh/go-fs"
 	"io"
 	"math"
