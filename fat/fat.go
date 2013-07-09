@@ -196,16 +196,17 @@ func (f *FAT) isEofCluster(cluster uint32) bool {
 }
 
 func (f *FAT) writeEntry12(data []byte, idx int, entry uint32) {
-	idx += idx / 2
+	dataIdx := idx + (idx / 2)
+	data = data[dataIdx : dataIdx+2]
 
-	if idx%2 == 0 {
-		// Cluster number is EVEN
-		data[idx] = byte(entry & 0xFF)
-		data[idx+1] = byte((entry >> 8) & 0x0F)
+	if idx%2 == 1 {
+		// ODD
+		data[0] |= byte((entry & 0x0F) << 4)
+		data[1] = byte((entry >> 4) & 0xFF)
 	} else {
-		// Cluster number is ODD
-		data[idx] |= byte((entry & 0x0F) << 4)
-		data[idx+1] = byte((entry >> 4) & 0xFF)
+		// Even
+		data[0] = byte(entry & 0xFF)
+		data[1] = byte((entry >> 8) & 0x0F)
 	}
 }
 
