@@ -298,6 +298,10 @@ func (d *DirectoryClusterEntry) IsLong() bool {
 	return (d.attr & AttrLongName) == AttrLongName
 }
 
+func (d *DirectoryClusterEntry) IsVolumeId() bool {
+	return (d.attr & AttrVolumeId) == AttrVolumeId
+}
+
 // DecodeDirectoryClusterEntry decodes a single directory entry in the
 // Directory structure.
 func DecodeDirectoryClusterEntry(data []byte) (*DirectoryClusterEntry, error) {

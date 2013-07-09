@@ -40,6 +40,11 @@ func DecodeDirectoryEntry(d *Directory, entries []*DirectoryClusterEntry) (*Dire
 		entries = entries[1:]
 	}
 
+	// Skip the volume ID
+	if len(entries) > 0 && entries[0].IsVolumeId() {
+		entries = entries[1:]
+	}
+
 	if len(entries) == 0 {
 		return nil, entries, nil
 	}
