@@ -148,13 +148,20 @@ func NewDirectoryCluster(start uint32, parent uint32, t time.Time) *DirectoryClu
 
 // NewFat16RootDirectory creates a new DirectoryCluster that is meant only
 // to be the root directory of a FAT12/FAT16 filesystem.
-func NewFat16RootDirectoryCluster(bs *BootSectorCommon) (*DirectoryCluster, error) {
+func NewFat16RootDirectoryCluster(bs *BootSectorCommon, label string) (*DirectoryCluster, error) {
 	if bs.RootEntryCount == 0 {
 		return nil, errors.New("root entry count is 0 in boot sector")
 	}
 
 	result := &DirectoryCluster{
 		entries: make([]*DirectoryClusterEntry, 0, bs.RootEntryCount),
+	}
+
+	// Create the volume ID entry
+	result.entries[0] = &DirectoryClusterEntry{
+		attr: AttrVolumeId,
+		name: label,
+		cluster: 0,
 	}
 
 	return result, nil

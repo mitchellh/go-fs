@@ -138,7 +138,7 @@ func (f *superFloppyFormatter) format() error {
 	if f.config.FATType == FAT32 {
 		panic("TODO")
 	} else {
-		rootDir, err = NewFat16RootDirectoryCluster(&bsCommon)
+		rootDir, err = NewFat16RootDirectoryCluster(&bsCommon, f.config.Label)
 		if err != nil {
 			return err
 		}
