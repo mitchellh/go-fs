@@ -154,7 +154,7 @@ func NewFat16RootDirectoryCluster(bs *BootSectorCommon, label string) (*Director
 	}
 
 	result := &DirectoryCluster{
-		entries: make([]*DirectoryClusterEntry, 0, bs.RootEntryCount),
+		entries: make([]*DirectoryClusterEntry, 1, bs.RootEntryCount),
 	}
 
 	// Create the volume ID entry
