@@ -210,6 +210,15 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 	if d.longName != "" {
 		runes := bytes.Runes([]byte(d.longName))
 
+		// The name must be zero-terminated then padded with 0xFF
+		// up to 13 characters
+		if len(runes) < 13 {
+			runes = append(runes, 0)
+			for len(runes) < 13 {
+				runes = append(runes, 0xFFFF)
+			}
+		}
+
 		// LDIR_Ord
 		result[0] = d.longOrd
 
@@ -230,13 +239,10 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 		result[13] = d.longChecksum
 
 		// LDIR_Name2
-		if len(runes) > 5 {
-			limit := int(math.Min(float64(len(runes)), 11)) - 5
-			for i := 0; i < limit; i++ {
-				offset := 14 + (i * 2)
-				data := result[offset : offset+2]
-				binary.LittleEndian.PutUint16(data, uint16(runes[i+5]))
-			}
+		for i := 0; i < 6; i++ {
+			offset := 14 + (i * 2)
+			data := result[offset : offset+2]
+			binary.LittleEndian.PutUint16(data, uint16(runes[i+5]))
 		}
 
 		// LDIR_FstClusLO
@@ -244,13 +250,10 @@ func (d *DirectoryClusterEntry) Bytes() []byte {
 		result[27] = 0
 
 		// LDIR_Name3
-		if len(runes) > 11 {
-			limit := int(math.Min(float64(len(runes)), 13)) - 11
-			for i := 0; i < limit; i++ {
-				offset := 28 + (i * 2)
-				data := result[offset : offset+2]
-				binary.LittleEndian.PutUint16(data, uint16(runes[i+11]))
-			}
+		for i := 0; i < 2; i++ {
+			offset := 28 + (i * 2)
+			data := result[offset : offset+2]
+			binary.LittleEndian.PutUint16(data, uint16(runes[i+11]))
 		}
 	} else {
 		// DIR_Name
