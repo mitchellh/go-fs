@@ -1,7 +1,5 @@
 package fat
 
-import ()
-
 type File struct {
 	chain *ClusterChain
 	dir   *Directory
