@@ -53,7 +53,7 @@ func (f *superFloppyFormatter) format() error {
 		BytesPerSector:      uint16(f.device.SectorSize()),
 		Media:               MediaFixed,
 		NumFATs:             2,
-		NumHeads:            64,
+		NumHeads:            2,
 		OEMName:             f.config.OEMName,
 		ReservedSectorCount: f.ReservedSectorCount(),
 		SectorsPerCluster:   sectorsPerCluster,
