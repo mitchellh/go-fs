@@ -377,6 +377,9 @@ func DecodeDirectoryClusterEntry(data []byte) (*DirectoryClusterEntry, error) {
 func NewLongDirectoryClusterEntry(name string, shortName string) ([]*DirectoryClusterEntry, error) {
 	// Split up the shortName properly
 	checksum := checksumShortName(shortNameEntryValue(shortName))
+	println(name)
+	println(shortName)
+	println("")
 
 	// Calcualte the number of entries we'll actually need to store
 	// the long name.
@@ -398,9 +401,14 @@ func NewLongDirectoryClusterEntry(name string, shortName string) ([]*DirectoryCl
 
 		// Calculate the offsets of the string for this entry
 		i := (len(name) % 13) + (i * 13)
+		if i == 0 {
+			i = 13
+		}
+
 		j := len(name) - i
 		k := int(math.Min(float64(j+13), float64(len(name))))
 
+		fmt.Printf("i j k: %d, %d, %d\n", i, j, k)
 		entry.longChecksum = checksum
 		entry.longName = name[j:k]
 	}
