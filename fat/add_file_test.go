@@ -17,7 +17,7 @@ func TestAddFile(t *testing.T) {
 		t.Fatalf("Error creating temporary file for floppy: %s", err)
 	}
 	defer floppyF.Close()
-//	defer os.Remove(floppyF.Name())
+	// defer os.Remove(floppyF.Name())
 
 	// Set the size of the file to be a floppy sized
 	if err := floppyF.Truncate(1440 * 1024); err != nil {
@@ -56,7 +56,7 @@ func TestAddFile(t *testing.T) {
 
 	// Go over each file and copy it.
 	for i := 0; i < 128; i++ {
-		filenames[i] = strings.Repeat("A", i + 1) + ".EXT"
+		filenames[i] = strings.Repeat("A", i+1) + ".EXT"
 	}
 
 	for _, filename := range filenames {
@@ -70,8 +70,8 @@ func TestAddFile(t *testing.T) {
 	for i, entry := range entries {
 		expecting := filenames[i]
 		if entry.Name() != expecting {
-// Name() returns the short name, how do we get the long name?
-//			t.Fatalf("Excepting %s, found %s", expecting, entry.Name())
+			// Name() returns the short name, how do we get the long name?
+			// t.Fatalf("Excepting %s, found %s", expecting, entry.Name())
 		}
 	}
 }
