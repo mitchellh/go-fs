@@ -18,7 +18,7 @@ type Directory struct {
 // DirectoryEntry implements fs.DirectoryEntry and represents a single
 // file/folder within a directory in a FAT filesystem. Note that the
 // underlying directory entry data structures on the disk may be more
-// than one to accomodate for long filenames.
+// than one to accommodate for long filenames.
 type DirectoryEntry struct {
 	dir        *Directory
 	lfnEntries []*DirectoryClusterEntry
