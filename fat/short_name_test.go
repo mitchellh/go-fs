@@ -62,6 +62,46 @@ func TestGenerateShortName(t *testing.T) {
 	if result != ".BIG" {
 		t.Fatalf("unexpected: %s", result)
 	}
+
+	// Test valid extension
+	result, err = generateShortName("proxy.psm", []string{})
+	if err != nil {
+		t.Fatalf("err should be nil: %s", err)
+	}
+
+	if result != "PROXY.PSM" {
+		t.Fatalf("unexpected: %s", result)
+	}
+
+	// Test long extension
+	result, err = generateShortName("proxy.psm1", []string{})
+	if err != nil {
+		t.Fatalf("err should be nil: %s", err)
+	}
+
+	if result != "PROXY~1.PSM" {
+		t.Fatalf("unexpected: %s", result)
+	}
+
+	// Test short extension
+	result, err = generateShortName("proxy.x", []string{})
+	if err != nil {
+		t.Fatalf("err should be nil: %s", err)
+	}
+
+	if result != "PROXY.X" {
+		t.Fatalf("unexpected: %s", result)
+	}
+
+	// Test double shortname
+	result, err = generateShortName("proxy.x", []string{"PROXY.X", "PROXY~1.X"})
+	if err != nil {
+		t.Fatalf("err should be nil: %s", err)
+	}
+
+	if result != "PROXY~2.X" {
+		t.Fatalf("unexpected: %s", result)
+	}
 }
 
 func TestShortNameEntryValue(t *testing.T) {
