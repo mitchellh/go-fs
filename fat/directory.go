@@ -2,9 +2,10 @@ package fat
 
 import (
 	"fmt"
-	"github.com/mitchellh/go-fs"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/go-fs"
 )
 
 // Directory implements fs.Directory and is used to interface with

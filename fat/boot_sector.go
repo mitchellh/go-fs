@@ -4,8 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/mitchellh/go-fs"
 	"unicode"
+
+	"github.com/mitchellh/go-fs"
 )
 
 type MediaType uint8

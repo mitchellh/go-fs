@@ -1,13 +1,14 @@
 package fat
 
 import (
-	"github.com/mitchellh/go-fs"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mitchellh/go-fs"
 )
 
 func TestAddFile(t *testing.T) {
