@@ -99,7 +99,7 @@ func (b *BootSectorCommon) Bytes() ([]byte, error) {
 
 	for i, r := range b.OEMName {
 		if r > unicode.MaxASCII {
-			return nil, fmt.Errorf("'%s' in OEM name not a valid ASCII char. Must be ASCII.", r)
+			return nil, fmt.Errorf("%#U in OEM name not a valid ASCII char. Must be ASCII.", r)
 		}
 
 		sector[0x3+i] = byte(r)
@@ -245,7 +245,7 @@ func (b *BootSectorFat16) Bytes() ([]byte, error) {
 
 	for i, r := range b.VolumeLabel {
 		if r > unicode.MaxASCII {
-			return nil, fmt.Errorf("'%s' in VolumeLabel not a valid ASCII char. Must be ASCII.", r)
+			return nil, fmt.Errorf("%#U in VolumeLabel not a valid ASCII char. Must be ASCII.", r)
 		}
 
 		sector[43+i] = byte(r)
@@ -258,7 +258,7 @@ func (b *BootSectorFat16) Bytes() ([]byte, error) {
 
 	for i, r := range b.FileSystemTypeLabel {
 		if r > unicode.MaxASCII {
-			return nil, fmt.Errorf("'%s' in FileSystemTypeLabel not a valid ASCII char. Must be ASCII.", r)
+			return nil, fmt.Errorf("%#U in FileSystemTypeLabel not a valid ASCII char. Must be ASCII.", r)
 		}
 
 		sector[54+i] = byte(r)
@@ -324,7 +324,7 @@ func (b *BootSectorFat32) Bytes() ([]byte, error) {
 
 	for i, r := range b.VolumeLabel {
 		if r > unicode.MaxASCII {
-			return nil, fmt.Errorf("'%s' in VolumeLabel not a valid ASCII char. Must be ASCII.", r)
+			return nil, fmt.Errorf("%#U in VolumeLabel not a valid ASCII char. Must be ASCII.", r)
 		}
 
 		sector[71+i] = byte(r)
@@ -337,7 +337,7 @@ func (b *BootSectorFat32) Bytes() ([]byte, error) {
 
 	for i, r := range b.FileSystemTypeLabel {
 		if r > unicode.MaxASCII {
-			return nil, fmt.Errorf("'%s' in FileSystemTypeLabel not a valid ASCII char. Must be ASCII.", r)
+			return nil, fmt.Errorf("%#U in FileSystemTypeLabel not a valid ASCII char. Must be ASCII.", r)
 		}
 
 		sector[82+i] = byte(r)
