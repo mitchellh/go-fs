@@ -53,14 +53,14 @@ func DecodeDirectoryEntry(d *Directory, entries []*DirectoryClusterEntry) (*Dire
 	// We have a long entry, so we have to traverse to the point where
 	// we're done. Also, calculate out the name and such.
 	if entries[0].IsLong() {
-		lfnEntries := make([]*DirectoryClusterEntry, 0, 3)
+		lfnEntries = make([]*DirectoryClusterEntry, 0, 3)
 		for entries[0].IsLong() {
 			lfnEntries = append(lfnEntries, entries[0])
 			entries = entries[1:]
 		}
 
 		var nameBytes []rune
-		nameBytes = make([]rune, 13*len(lfnEntries))
+		nameBytes = make([]rune, 0, 13*len(lfnEntries))
 		for i := len(lfnEntries) - 1; i >= 0; i-- {
 			for _, char := range lfnEntries[i].longName {
 				nameBytes = append(nameBytes, char)

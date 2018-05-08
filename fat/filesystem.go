@@ -28,7 +28,8 @@ func New(device fs.BlockDevice) (*FileSystem, error) {
 
 	var rootDir *DirectoryCluster
 	if bs.FATType() == FAT32 {
-		panic("FAT32 not implemented yet")
+		// WARNING: very experimental and incomplete
+		rootDir, err = DecodeFAT32RootDirectoryCluster(device, fat)
 	} else {
 		rootDir, err = DecodeFAT16RootDirectoryCluster(device, bs)
 		if err != nil {
