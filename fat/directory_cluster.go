@@ -80,6 +80,15 @@ func DecodeDirectoryCluster(startCluster uint32, device fs.BlockDevice, fat *FAT
 	return result, nil
 }
 
+// DecodeFAT32RootDirectory decodes the FAT32 root directory structure
+// from the device.
+func DecodeFAT32RootDirectoryCluster(device fs.BlockDevice, fat *FAT) (*DirectoryCluster, error) {
+	// 2 is typcially the root dir for fat32
+	// FIXME: read from BootSectorCommon and BPB_RootClus there
+	return DecodeDirectoryCluster(2, device, fat)
+
+}
+
 // DecodeFAT16RootDirectory decodes the FAT16 root directory structure
 // from the device.
 func DecodeFAT16RootDirectoryCluster(device fs.BlockDevice, bs *BootSectorCommon) (*DirectoryCluster, error) {
@@ -304,7 +313,7 @@ func (d *DirectoryClusterEntry) IsLong() bool {
 }
 
 func (d *DirectoryClusterEntry) IsVolumeId() bool {
-	return (d.attr & AttrVolumeId) == AttrVolumeId
+	return d.attr == AttrVolumeId
 }
 
 // DecodeDirectoryClusterEntry decodes a single directory entry in the
@@ -332,8 +341,11 @@ func DecodeDirectoryClusterEntry(data []byte) (*DirectoryClusterEntry, error) {
 			offset := 28 + (i * 2)
 			chars[i+11] = binary.LittleEndian.Uint16(data[offset : offset+2])
 		}
-
 		result.longName = string(utf16.Decode(chars))
+		idx := strings.IndexByte(result.longName, 0)
+		if idx > 0 {
+			result.longName = result.longName[:idx]
+		}
 		result.longChecksum = data[13]
 	} else {
 		result.deleted = data[0] == 0xE5
